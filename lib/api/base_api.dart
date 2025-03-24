@@ -83,15 +83,17 @@ Future<http.StreamedResponse> request({
   return await httpClient.send(req);
 }
 
-void printStreamedResp(http.StreamedResponse resp) async {
+Future<String> printStreamedResp(http.StreamedResponse resp) async {
+  final String body = await resp.stream.bytesToString();
   final dbgStr =
       ("\nResponse for: '${resp.request?.url}'\n"
           "---------\n"
           "Code: ${resp.statusCode}\n"
           "Req-Headers: ${resp.request?.headers}\n"
           "Resp-Headers: ${resp.headers}\n"
-          "${await resp.stream.bytesToString()}"
+          "Body: $body"
           "---------\n");
 
   print(dbgStr);
+  return body;
 }
