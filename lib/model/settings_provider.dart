@@ -32,10 +32,10 @@ class SettingsProvider with ChangeNotifier {
   void loadJson({required Map<String, dynamic> jsonObj, JsonStore? jsonStore}) {
     final Map<String, Student> contacts = {};
     if (jsonObj['contacts'] != null) {
-      (jsonObj['contacts'] as List).forEach((v) {
+      for (var v in (jsonObj['contacts'] as List)) {
         final Student s = Student.fromJson(v);
         contacts[s.uuid] = s;
-      });
+      }
     }
 
     _settings.addAll({

@@ -1,6 +1,6 @@
 import 'package:ntu_library_companion/util.dart';
 
-/// A Cate is a Type of Room or Service that the library offers
+/// A Room has a location in the library and is a rentable unit
 class Room {
   final String rid;
   final String cateId;
@@ -19,10 +19,7 @@ class Room {
   });
 
   factory Room.fromJson(Map<String, dynamic> json) {
-    String aid = "";
-    if ((json["resourceAttachs"] as List).isNotEmpty) {
-      aid = json["resourceAttachs"]?.first["aid"];
-    }
+    String aid = (json["resourceAttachs"] as List?)?.firstOrNull?["aid"] ?? "";
     return Room(
       rid: json["rid"],
       cateId: json["cateId"],

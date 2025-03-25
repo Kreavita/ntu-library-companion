@@ -48,7 +48,7 @@ class CategoryCard extends StatelessWidget {
                       children: [
                         LinearProgressIndicator(
                           minHeight: 20,
-                          borderRadius: BorderRadius.circular(15),
+                          borderRadius: BorderRadius.circular(10),
                           value: cat.available / cat.capacity,
                           color: c.tertiary.withAlpha(100),
                           backgroundColor: c.tertiaryContainer.withAlpha(100),
