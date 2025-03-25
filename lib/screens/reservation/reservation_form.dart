@@ -86,7 +86,7 @@ class _ReservationFormState extends State<ReservationForm> {
     final topPadding = MediaQuery.of(context).viewPadding.top;
 
     ConferenceRoom? c =
-        _conferenceRooms!
+        _conferenceRooms
             .where((element) => (element.rid == _selectedRoom?.rid))
             .firstOrNull;
 
@@ -159,7 +159,7 @@ class _ReservationFormState extends State<ReservationForm> {
                                       right: 2.0,
                                     ),
                                     child: Text(
-                                      DateFormat("EEEE,").format(_date),
+                                      DateFormat("EEE,").format(_date),
                                     ),
                                   ),
                                   Text(DateFormat("MMM d").format(_date)),
@@ -184,8 +184,8 @@ class _ReservationFormState extends State<ReservationForm> {
                       InfoRow(
                         icon: Icons.info_outline,
                         child: Text(
-                          "Pick between ${ttEntry[0].format(context)} "
-                          "and ${ttEntry[1].format(context)}.",
+                          "Opened from ${ttEntry[0].format(context)} "
+                          "to ${ttEntry[1].format(context)}.",
                         ),
                       ),
                     if (ttEntry.length < 2)
@@ -196,7 +196,7 @@ class _ReservationFormState extends State<ReservationForm> {
                     InfoRow(
                       icon: Icons.timelapse_outlined,
                       child: Text(
-                        "Reservation duration must be between ${widget.minHours * 60} minutes and ${widget.maxHours} hours.",
+                        "Reservation duration must be between ${(widget.minHours * 60).toAutoString()} min and ${widget.maxHours.toAutoString()} hours.",
                       ),
                     ),
 
@@ -424,14 +424,18 @@ class _ReservationFormState extends State<ReservationForm> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Error: Time span must be at least ${widget.roundMin} Minutes.',
+            'Error: Time span must be at least ${(widget.minHours * 60).toAutoString()} Minutes.',
           ),
         ),
       );
     } else if (_end.difference(_start).inMinutes > widget.maxHours * 60 &&
         context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: Time Span larger than allowed.')),
+        SnackBar(
+          content: Text(
+            'Error: Time Span must not exceed ${widget.maxHours.toAutoString()} hours.',
+          ),
+        ),
       );
     }
   }
@@ -521,7 +525,7 @@ class _ReservationFormState extends State<ReservationForm> {
     } else {
       final Booking b = Booking.fromJson(postBookingJson: jsonContent);
       message =
-          'Reservation booked for ${DateFormat('yyyy-MM-dd').format(_date)} from ${formatTime(_start)} to ${formatTime(_end)} with participants: ${participants.map((s) => s.name).join(', ')}';
+          'Booked for ${DateFormat('MMM d').format(_date)} from ${formatTime(_start)} to ${formatTime(_end)} with: ${participants.map((s) => s.name).join(', ')}, Code: ${b.bookingCode}';
     }
 
     if (mounted) {

@@ -54,6 +54,12 @@ final List<String> timetableDays = [
   "Sunday",
 ];
 
+extension AutoFormat on double {
+  String toAutoString() {
+    return (toInt() == this) ? toInt().toString() : toString();
+  }
+}
+
 extension RoundedTimeOfDay on TimeOfDay {
   TimeOfDay roundDown({required int min}) {
     int totalMinutes = hour * 60 + minute;

@@ -72,7 +72,7 @@ class _AddUserFormState extends State<AddUserForm> {
       key: _formKey,
       child: AlertDialog(
         title: const Text("Add a Contact"),
-        icon: const Icon(Icons.login_outlined),
+        icon: const Icon(Icons.person_add_alt_1_outlined),
         content: SingleChildScrollView(
           child: Column(
             children: [
