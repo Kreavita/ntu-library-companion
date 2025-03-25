@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:json_store/json_store.dart';
 import 'package:ntu_library_companion/model/settings_provider.dart';
 import 'package:provider/provider.dart';
@@ -36,6 +37,12 @@ class MyApp extends StatelessWidget {
         ),
       ),
       home: MyHomePage(title: 'NTU Library Companion'),
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en'), Locale('de'), Locale('zh')],
     );
   }
 }
@@ -108,6 +115,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // Intl.defaultLocale = Localizations.localeOf(context).languageCode;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
