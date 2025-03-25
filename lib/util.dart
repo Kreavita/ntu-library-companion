@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:local_auth/local_auth.dart';
 
 String cleanHtml(String htmlString) {
   String cleanedString = htmlString.replaceAll(RegExp(r'<br\s*\/?>'), '\n');
@@ -8,6 +10,20 @@ String cleanHtml(String htmlString) {
 
 String formatTime(TimeOfDay time) {
   return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+}
+
+Future<bool> localAuth(String reason) async {
+  final LocalAuthentication auth = LocalAuthentication();
+  try {
+    return await auth.authenticate(
+      localizedReason: reason,
+      options: const AuthenticationOptions(
+        stickyAuth: true, // Enable stickyAuth
+      ),
+    );
+  } on PlatformException {
+    return true; // Not supported by Platform
+  }
 }
 
 extension RoundedDateTime on DateTime {
