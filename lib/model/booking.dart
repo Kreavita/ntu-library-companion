@@ -40,66 +40,48 @@ class Booking {
     Map<String, dynamic>? postBookingJson, // from postBooking()
   }) {
     Map<String, dynamic> json;
-    Room room;
     Account host;
-    List<Student> bp = [];
 
     if (bookingJson != null) {
       json = bookingJson;
-      room = Room(
-        rid: json['mainResourceId'],
-        cateId: json['mainResourceCateId'],
-        name: json['mainResourceName'],
-        description: json['mainResourceCateId'],
-        floor: json['mainResourceCateId'],
-        attachmentId: json['mainResourceCateId'],
-      );
       host = Account.fromJson(accountData: json['applicant']);
-    } else if (bookingsJson != null) {
-      json = bookingsJson;
-      room = Room(
-        rid: json['mainResourceId'],
-        attachmentId: "",
-        name: json["mainResourceName"],
-        cateId: json["mainResourceCateId"],
-        description: "",
-        floor: "",
-      );
+    } else {
+      json = bookingsJson ?? postBookingJson!;
       host = Account(
-        account: json['hostAccount'],
-        name: json['hostName'],
-        email: '',
-        status: '',
         uuid: json['hostId'],
+        account: json['hostAccount'] ?? "Not Provided",
+        name: json['hostName'],
+        phone: '',
+        email: '',
+        birthDay: DateTime.now(),
         titleId: json['hostTitleId'],
         titleName: json['hostTitleName'],
-        validEndDate: DateTime.now(),
-        phone: '',
-        birthDay: DateTime.now(),
-        cardNo: '',
-        emailVerified: '',
+        cardNo: 'Not Provided',
+        status: 'Y',
+        emailVerified: 'N',
         createDate: DateTime.now(),
+        validEndDate: DateTime.now(),
       );
-      bp =
-          json['bookingParticipants'].map<Student>((p) {
-            return Student(
-              uuid: p["pid"],
-              account: p["participantAccount"],
-              name: p["participantName"],
-            );
-          }).toList();
-    } else {
-      json = postBookingJson!;
-      room = Room(
-        rid: json['rid'],
-        attachmentId: "",
-        name: "",
-        cateId: "",
-        description: "",
-        floor: "",
-      );
-      host = Account.fromJson(accountData: json['host']);
     }
+    // Room Info is the same for all the booking request types
+    final Room room = Room(
+      rid: json['mainResourceId'],
+      cateId: json["mainResourceCateId"],
+      name: json["mainResourceName"],
+      description: "No Description provided",
+      floor: "No Floor provided",
+      attachmentId: "",
+    );
+
+    // Booking Participants Data is also the same for all requests
+    final List<Student> bp =
+        json['bookingParticipants'].map<Student>((p) {
+          return Student(
+            uuid: p["participantId"],
+            account: p["participantAccount"],
+            name: p["participantName"],
+          );
+        }).toList();
 
     return Booking(
       bid: json['bid'],
