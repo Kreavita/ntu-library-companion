@@ -3,8 +3,12 @@ import 'package:intl/intl.dart';
 import 'package:ntu_library_companion/api/auth_service.dart';
 import 'package:ntu_library_companion/api/library_service.dart';
 import 'package:ntu_library_companion/model/booking.dart';
+import 'package:ntu_library_companion/model/booking_stats.dart';
 import 'package:ntu_library_companion/model/settings_provider.dart';
+import 'package:ntu_library_companion/model/student.dart';
+import 'package:ntu_library_companion/screens/profile/booking_stats_banner.dart';
 import 'package:ntu_library_companion/widgets/centered_content.dart';
+import 'package:ntu_library_companion/widgets/title_with_icon.dart';
 import 'package:provider/provider.dart';
 
 class BookingHistory extends StatefulWidget {
@@ -22,6 +26,7 @@ class _BookingHistoryState extends State<BookingHistory> {
   bool _fetching = false;
   bool _complete = false;
   List<Booking> _history = [];
+  BookingStats? _bookingStats;
 
   @override
   Widget build(BuildContext context) {
@@ -36,9 +41,20 @@ class _BookingHistoryState extends State<BookingHistory> {
         child:
             (_complete)
                 ? ListView.builder(
-                  itemCount: _history.length,
+                  itemCount: _history.length + 1,
                   itemBuilder: (context, index) {
-                    final b = _history[index];
+                    if (index == 0) {
+                      return Column(
+                        children: [
+                          BookingStatsBanner(stats: _bookingStats!),
+                          TitleWithIcon(
+                            icon: Icons.replay,
+                            title: "Recent Bookings:",
+                          ),
+                        ],
+                      );
+                    }
+                    final b = _history[index - 1];
                     final from = DateFormat(
                       'MMM d, HH:mm',
                     ).format(b.bookingStartDate);
@@ -115,6 +131,10 @@ class _BookingHistoryState extends State<BookingHistory> {
     }
 
     _history = await _library.getBookings(authToken, includePast: true);
+    _bookingStats = await _library.getBookingStats(
+      authToken,
+      _settings!.get('accountHolder') as Student,
+    );
 
     if (mounted) {
       setState(() {
