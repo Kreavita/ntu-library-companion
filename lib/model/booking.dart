@@ -54,7 +54,7 @@ class Booking {
         floor: json['mainResourceCateId'],
         attachmentId: json['mainResourceCateId'],
       );
-      host = Account.fromJson(json['applicant']);
+      host = Account.fromJson(accountData: json['applicant']);
     } else if (bookingsJson != null) {
       json = bookingsJson;
       room = Room(
@@ -74,6 +74,11 @@ class Booking {
         titleId: json['hostTitleId'],
         titleName: json['hostTitleName'],
         validEndDate: DateTime.now(),
+        phone: '',
+        birthDay: DateTime.now(),
+        cardNo: '',
+        emailVerified: '',
+        createDate: DateTime.now(),
       );
       bp =
           json['bookingParticipants'].map<Student>((p) {
@@ -93,7 +98,7 @@ class Booking {
         description: "",
         floor: "",
       );
-      host = Account.fromJson(json['host']);
+      host = Account.fromJson(accountData: json['host']);
     }
 
     return Booking(

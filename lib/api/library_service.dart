@@ -1,21 +1,24 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart';
 import 'package:intl/intl.dart';
 import 'package:ntu_library_companion/api/base_api.dart';
 import 'package:ntu_library_companion/model/account.dart';
+import 'package:ntu_library_companion/model/api_result.dart';
 import 'package:ntu_library_companion/model/booking.dart';
+import 'package:ntu_library_companion/model/booking_stats.dart';
 import 'package:ntu_library_companion/model/category.dart';
+import 'package:ntu_library_companion/model/conference_room.dart';
 import 'package:ntu_library_companion/model/room.dart';
 import 'package:ntu_library_companion/model/student.dart';
 import 'package:ntu_library_companion/util.dart';
 
 class LibraryService {
-  Future<dynamic> get({
+  Future<ApiResult> get({
     required Endpoint endpoint,
     Map<String, dynamic>? params,
     Map<String, String>? headers,
-    bool json = false,
     bool log = false,
   }) async {
     final resp = await request(
@@ -23,17 +26,13 @@ class LibraryService {
       uri: endpoint.uri(params: params),
       headers: headers,
     );
-    if (log) {
-      printStreamedResp(resp);
-    }
-    if (resp.statusCode != 200) {
-      if (json) return {"error": resp.statusCode};
-      return null;
-    }
-    final String body = await resp.stream.bytesToString();
-
-    if (json) return jsonDecode(body);
-    return body;
+    return ApiResult(
+      body:
+          (log)
+              ? await printStreamedResp(resp)
+              : await resp.stream.bytesToString(),
+      statusCode: resp.statusCode,
+    );
   }
 
   // get avail rooms
@@ -51,36 +50,38 @@ class LibraryService {
       headers: {"authToken": authToken},
     );
 
-    if (resp.statusCode != 200) {
+    if (resp.statusCode != 200) return null;
+
+    try {
+      final List<dynamic> userResults = jsonDecode(
+        await resp.stream.bytesToString(),
+      );
+
+      if (userResults.isEmpty) return null;
+
+      return Account.fromJson(accountData: userResults.first);
+    } catch (e) {
       return null;
     }
-
-    final List<dynamic> userResults = jsonDecode(
-      await resp.stream.bytesToString(),
-    );
-
-    if (userResults.isEmpty) {
-      return null;
-    }
-
-    return Account.fromJson(userResults.first);
   }
 
-  Future<Account?> getMyAccount(String authToken) async {
-    final bookingReq = await get(
-      endpoint: Endpoint.myAccount,
+  Future<Account?> getMyProfile(String authToken) async {
+    final ApiResult res = await get(
+      endpoint: Endpoint.myProfile,
       params: {'timeStamp': "${DateTime.now().millisecondsSinceEpoch}"},
       headers: {"authToken": authToken},
     );
 
-    if (bookingReq.statusCode != 200) {
-      return null;
-    }
+    if (res.statusCode != 200) return null;
 
-    final jsonData = jsonDecode(await bookingReq.stream.bytesToString());
-    return Account.fromJson(jsonData);
+    final json = res.asJson<Map<String, dynamic>?>(fallback: null);
+    if (json == null) return null;
+
+    // (uuid, account, email, name, status, titleId, titleName, validEndDate)
+    return Account.fromJson(profileData: json);
   }
 
+  /// https://sms.lib.ntu.edu.tw/rest/council/user/bookings/pager?queryString={"status":"Y,E,U,L,I"}&pagerString={"pageSize":-1,"sortColumnName":"bookingStartDate"}&bookingStartDate=2025-03-22&timeStamp=1742662402564
   Future<List<Booking>> getBookings(
     String authToken, {
     bool includePast = false,
@@ -95,13 +96,17 @@ class LibraryService {
         'timeStamp': "${now.millisecondsSinceEpoch}",
       };
     }
-    final jsonResp = await get(
+    final ApiResult res = await get(
       endpoint: Endpoint.reservationsPager,
-      json: true,
       params: params,
       headers: {"authToken": authToken},
     );
-    return (jsonResp["resultList"] as List)
+
+    if (res.statusCode != 200) return [];
+
+    final jsonObj = res.asJson<Map>(fallback: {"resultList": []});
+
+    return (jsonObj["resultList"] as List)
         .map((json) => Booking.fromJson(bookingsJson: json))
         .toList();
   }
@@ -109,35 +114,48 @@ class LibraryService {
   Future<Map<String, Category>> getCategories(String authToken) async {
     final Map<String, Category> cates = {};
 
-    final resp = await get(
+    final ApiResult res = await get(
       endpoint: Endpoint.categoryPager,
       headers: {"authToken": authToken},
       params: {
         'queryString': '{"status":"Y"}',
         'pagerString': '{"pageSize":-1}',
       },
-      json: true,
     );
 
-    if (resp["error"] != null) {
+    if (res.statusCode != 200) {
       return cates;
     }
 
-    for (var cate in resp["resultList"] as List<dynamic>) {
+    final jsonObj = res.asJson<Map<String, dynamic>>(
+      fallback: {"resultList": []},
+    );
+
+    for (final cate in jsonObj["resultList"] as List) {
       try {
-        Map<String, dynamic> avail = await get(
+        final ApiResult availRes = await get(
           endpoint: Endpoint.catAvail,
           params: {"cateId": cate["cateId"]},
           headers: {"authToken": authToken},
-          json: true,
         );
-        Map<String, dynamic> count = await get(
+        final ApiResult totalRes = await get(
           endpoint: Endpoint.catTotal,
           params: {"miscQueryString": '{"cateId":"${cate["cateId"]}"}'},
           headers: {"authToken": authToken},
-          json: true,
         );
-        cates[cate["cateId"]] = Category.fromJson(cate, avail, count);
+
+        final availJson = availRes.asJson<Map<String, dynamic>>(
+          fallback: {"count": 0},
+        );
+        final totalJson = totalRes.asJson<Map<String, dynamic>>(
+          fallback: {"count": 0},
+        );
+
+        cates[cate["cateId"]] = Category.fromJson(
+          cate,
+          availJson["count"] ?? 0,
+          totalJson["count"] ?? 0,
+        );
       } catch (e) {
         print(e);
       }
@@ -145,7 +163,8 @@ class LibraryService {
     return cates;
   }
 
-  Future<Booking?> postBooking(
+  /// Post a room reservation to the library services
+  Future<StreamedResponse> postBooking(
     Account host,
     Room room,
     TimeOfDay bookingStart,
@@ -163,22 +182,18 @@ class LibraryService {
         "hostName": host.name,
         "bookingStartDate": "$dateFmt ${formatTime(bookingStart)}:00",
         "bookingEndDate": "$dateFmt ${formatTime(bookingEnd)}:00",
-        "mainResourceId	": room.rid,
+        "mainResourceId": room.rid,
         "bookingParticipantIdList": participants.map((p) => p.uuid).toList(),
         "userCount": "${participants.length + 1}",
       },
       headers: {"authToken": authToken},
     );
 
-    if (bookingReq.statusCode != 200) {
-      return null;
-    }
-    return Booking.fromJson(
-      postBookingJson: jsonDecode(await bookingReq.stream.bytesToString()),
-    );
+    return bookingReq;
     // {"hostId":"uuid","hostName":"Name","bookingStartDate":"2025/03/25 16:30:00","bookingEndDate":"2025/03/25 17:00:00","mainResourceId":"rid","bookingParticipantIdList":["uuid_1","uuid_2"],"userCount":3}
   }
 
+  /// Get a booked room by its booking id (bid). Returns null if the request fails
   Future<Booking?> getBooking(String bid, String authToken) async {
     final bookingsWithPathVar = Uri.parse(
       "${Endpoint.myBookings.uri().toString()}/$bid",
@@ -197,6 +212,22 @@ class LibraryService {
     return Booking.fromJson(bookingJson: jsonData);
   }
 
+  Future<BookingStats?> getBookingStats(String authToken, Student user) async {
+    final ApiResult res = await get(
+      endpoint: Endpoint.myBookingStats,
+      params: {"userId": user.uuid},
+      headers: {"authToken": authToken},
+    );
+
+    if (res.statusCode != 200) return null;
+
+    final jsonData = res.asJson<List>(fallback: []);
+
+    if (jsonData.isEmpty) return null;
+
+    return BookingStats.fromJson(jsonData.first);
+  }
+
   /// Log out from the SMS Library System
   Future<bool> logout(String authToken) async {
     final logoutRequest = await request(
@@ -205,5 +236,30 @@ class LibraryService {
       headers: {'authToken': authToken, 'Content-Type': 'application/json'},
     );
     return logoutRequest.statusCode == 200;
+  }
+
+  /// Get Conference Rooms
+  /// https://sms.lib.ntu.edu.tw/rest/council/common/conferenceRooms/pager?queryString={"status":"Y","searchableFlag":"Y"}&miscQueryString={"branchId":"4028098173bcaac10173bcc07a670002"}
+  Future<List<ConferenceRoom>> getConferenceRooms(
+    String authToken,
+    Category cate,
+  ) async {
+    final ApiResult res = await get(
+      endpoint: Endpoint.conferenceRoomsPager,
+      params: {
+        'queryString': '{"status":"Y","searchableFlag":"Y"}',
+        'pagerString': '{"pageSize":-1}',
+        'miscQueryString': '{"branchId": "${cate.branch.bid}"}',
+      },
+      headers: {"authToken": authToken},
+    );
+
+    if (res.statusCode != 200) return [];
+
+    final jsonObj = res.asJson<Map>(fallback: {"resultList": []});
+
+    return (jsonObj["resultList"] as List)
+        .map((json) => ConferenceRoom.fromJson(json))
+        .toList();
   }
 }

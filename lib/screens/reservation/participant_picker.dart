@@ -36,7 +36,7 @@ class ParticipantPicker extends StatelessWidget {
               (participants.isEmpty)
                   ? InfoRow(
                     icon: Icons.info_outline,
-                    child: Text("Select ${2} to ${7} additional Participants."),
+                    child: Text("Selected Participants will appear here."),
                   )
                   : Wrap(
                     spacing: 5.0,

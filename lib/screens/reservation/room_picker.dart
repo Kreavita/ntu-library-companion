@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:ntu_library_companion/api/base_api.dart';
 import 'package:ntu_library_companion/api/library_service.dart';
+import 'package:ntu_library_companion/model/api_result.dart';
 import 'package:ntu_library_companion/model/category.dart';
 import 'package:ntu_library_companion/model/room.dart';
 import 'package:ntu_library_companion/util.dart';
@@ -122,9 +123,8 @@ class _RoomPickerState extends State<RoomPicker> {
 
     String date = DateFormat("y/MM/dd").format(_date!);
 
-    final jsonResp = await _api.get(
+    final ApiResult res = await _api.get(
       endpoint: Endpoint.availRooms,
-      json: true,
       headers: {"authToken": widget.authToken},
       params: {
         "bookingStartDate": "$date ${formatTime(_startTime!)}:00",
@@ -133,14 +133,18 @@ class _RoomPickerState extends State<RoomPicker> {
       },
     );
 
-    if (jsonResp.runtimeType != List && context.mounted) {
+    if (res.statusCode != 200 && context.mounted) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error: Couldnt get rooms.')));
     }
 
-    _rooms.clear();
-    _rooms.addAll(jsonResp.map<Room>((o) => Room.fromJson(o)));
+    final jsonObj = res.asJson<List>(fallback: []);
+
+    setState(() {
+      _rooms.clear();
+      _rooms.addAll(jsonObj.map<Room>((o) => Room.fromJson(o)));
+    });
 
     if (!_rooms.any((room) => room.rid == _selectedRid)) {
       widget.onTap(null);

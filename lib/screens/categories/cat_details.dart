@@ -40,19 +40,29 @@ class _CategoryDetailsState extends State<CategoryDetails>
     for (var mode in openingModes) {
       TimeTable modeTable = {};
       for (var i = 0; i < timetableDays.length; i++) {
+        final day = timetableDays[i].substring(0, 3).toLowerCase();
+
         List<TimeOfDay> times = [];
-        for (var time in ["Start", "End"]) {
-          final day = timetableDays[i].substring(0, 3).toLowerCase();
-          String? timeStr = json["$day${mode}Open${time}Time"];
-          int hour = -1, min = 0;
-          if (timeStr != null) {
-            hour = int.parse(timeStr.substring(0, 2));
-            min = int.parse(timeStr.substring(2, 4));
-          } else if (json["${timetableDays[i]}${mode}OpenStartHour"] != null) {
-            hour = json["${timetableDays[i]}${mode}OpenStartHour"];
+
+        String? openStatus = json["$day${mode}OpenStatus"];
+
+        if (openStatus == "Y") {
+          for (var time in ["Start", "End"]) {
+            String? timeStr = json["$day${mode}Open${time}Time"];
+            int hour = -1, min = 0;
+
+            if (timeStr != null) {
+              hour = int.parse(timeStr.substring(0, 2));
+              min = int.parse(timeStr.substring(2, 4));
+            } else if (json["${timetableDays[i]}${mode}OpenStartHour"] !=
+                null) {
+              hour = json["${timetableDays[i]}${mode}OpenStartHour"];
+            }
+
+            if (hour != -1) times.add(TimeOfDay(hour: hour, minute: min));
           }
-          if (hour != -1) times.add(TimeOfDay(hour: hour, minute: min));
         }
+
         modeTable[timetableDays[i]] = (times.length == 2) ? times : [];
       }
       collection.add(modeTable);
@@ -66,10 +76,11 @@ class _CategoryDetailsState extends State<CategoryDetails>
       MaterialPageRoute(
         builder:
             (context) => ReservationForm(
-              timetable: _openInfo[0],
-              maxHours: 3,
               cate: widget.cate,
-              roundMin: 30,
+              timetable: _openInfo[0],
+              maxHours: widget.cate.bookingPolicy["hourOfUsageUpperLimit"],
+              minHours: widget.cate.bookingPolicy["hourOfUsageLowerLimit"],
+              roundMin: widget.cate.bookingPolicy["hourOfUsageMin"],
             ),
       ),
     );

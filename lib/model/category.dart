@@ -29,19 +29,18 @@ class Category {
 
   factory Category.fromJson(
     Map<String, dynamic> jsonObj,
-    Map<String, dynamic> avail,
-    Map<String, dynamic> count,
+    int avail,
+    int count,
   ) {
     List<dynamic> attachments = jsonObj["resourceCateAttachs"];
     return Category(
       catId: jsonObj['cateId'] as String,
       name: cleanHtml(jsonObj['engName'] as String),
       description: cleanHtml(jsonObj['description'] ?? "No Description"),
-      attachmentId:
-          (attachments.isNotEmpty) ? attachments.first["aid"] as String : "",
+      attachmentId: attachments.firstOrNull?["aid"] ?? "",
       branch: Branch.fromJson(jsonObj["branch"]),
-      available: avail['count'] as int,
-      capacity: count['count'] as int,
+      available: avail,
+      capacity: count,
       bookingEngDesc: cleanHtml(
         jsonObj['bookingEngDesc'] ?? "No Booking information",
       ),

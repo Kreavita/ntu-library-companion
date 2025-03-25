@@ -1,10 +1,14 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart';
 import 'package:intl/intl.dart';
 import 'package:ntu_library_companion/api/auth_service.dart';
 import 'package:ntu_library_companion/api/library_service.dart';
 import 'package:ntu_library_companion/model/account.dart';
 import 'package:ntu_library_companion/model/booking.dart';
 import 'package:ntu_library_companion/model/category.dart';
+import 'package:ntu_library_companion/model/conference_room.dart';
 import 'package:ntu_library_companion/model/room.dart';
 import 'package:ntu_library_companion/model/settings_provider.dart';
 import 'package:ntu_library_companion/model/student.dart';
@@ -17,7 +21,8 @@ import 'package:provider/provider.dart';
 class ReservationForm extends StatefulWidget {
   final Category cate;
   final TimeTable timetable;
-  final int maxHours;
+  final double maxHours;
+  final double minHours;
   final int roundMin;
 
   const ReservationForm({
@@ -26,6 +31,7 @@ class ReservationForm extends StatefulWidget {
     required this.timetable,
     required this.maxHours,
     required this.roundMin,
+    required this.minHours,
   });
 
   @override
@@ -34,16 +40,22 @@ class ReservationForm extends StatefulWidget {
 
 class _ReservationFormState extends State<ReservationForm> {
   final _formKey = GlobalKey<FormState>();
+  final LibraryService _library = LibraryService();
   late final SettingsProvider _settings = Provider.of<SettingsProvider>(
     context,
   );
-  final LibraryService _library = LibraryService();
-  AuthService? _auth;
+  late final AuthService _auth = AuthService(settings: _settings);
+  String? _authToken;
 
+  List<ConferenceRoom> _conferenceRooms = [];
   Map<String, Student>? _contacts;
+
   final Set<String> _participants = <String>{};
   DateTime _date = DateTime.now();
   Room? _selectedRoom;
+
+  var _minParticipants = 0;
+  var _maxParticipants = 0;
 
   late TimeOfDay _start = TimeOfDay.fromDateTime(
     _date,
@@ -52,15 +64,36 @@ class _ReservationFormState extends State<ReservationForm> {
 
   bool _submitting = false;
 
+  Future<void> _getConfRooms() async {
+    if (_conferenceRooms.isNotEmpty) return;
+    _authToken ??= await _auth.getToken();
+    if (_authToken == null) return;
+
+    _conferenceRooms = await _library.getConferenceRooms(
+      _authToken!,
+      widget.cate,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    _auth ??= AuthService(settings: _settings);
+    _getConfRooms();
     _contacts ??= _settings.get("contacts");
 
     final ttEntry =
         widget.timetable[timetableDays[_date.weekday - 1 % 7]] ?? [];
     final colors = Theme.of(context).colorScheme;
     final topPadding = MediaQuery.of(context).viewPadding.top;
+
+    ConferenceRoom? c =
+        _conferenceRooms!
+            .where((element) => (element.rid == _selectedRoom?.rid))
+            .firstOrNull;
+
+    if (c != null) {
+      _minParticipants = c.capacityLowerLimit - 1;
+      _maxParticipants = c.capacityUpperLimit - 1;
+    }
 
     return Scaffold(
       body: Form(
@@ -161,9 +194,9 @@ class _ReservationFormState extends State<ReservationForm> {
                         child: Text("Not open on the selected date."),
                       ),
                     InfoRow(
-                      icon: Icons.account_circle_outlined,
+                      icon: Icons.timelapse_outlined,
                       child: Text(
-                        "Reservation duration must be between ${widget.roundMin} minutes and ${widget.maxHours} hours.",
+                        "Reservation duration must be between ${widget.minHours * 60} minutes and ${widget.maxHours} hours.",
                       ),
                     ),
 
@@ -263,6 +296,13 @@ class _ReservationFormState extends State<ReservationForm> {
                         });
                       },
                     ),
+                    if (_selectedRoom != null)
+                      InfoRow(
+                        icon: Icons.group_add_outlined,
+                        child: Text(
+                          "The selected Room requires $_minParticipants to $_maxParticipants Participants.",
+                        ),
+                      ),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 16.0),
                       child: Text(
@@ -388,7 +428,7 @@ class _ReservationFormState extends State<ReservationForm> {
           ),
         ),
       );
-    } else if (_end.difference(_start).inHours > widget.maxHours &&
+    } else if (_end.difference(_start).inMinutes > widget.maxHours * 60 &&
         context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: Time Span larger than allowed.')),
@@ -397,15 +437,18 @@ class _ReservationFormState extends State<ReservationForm> {
   }
 
   bool _validateTimes() {
-    bool minTimespan = _end.difference(_start).inMinutes >= widget.roundMin;
-    bool maxTimespan = _end.difference(_start).inHours <= widget.maxHours;
+    int difference = _end.difference(_start).inMinutes;
+    bool minTimespan = difference >= widget.minHours * 60;
+    bool maxTimespan = difference <= widget.maxHours * 60;
     bool openHours = _withinOpenHours(_start) && _withinOpenHours(_end);
     return minTimespan && maxTimespan && openHours;
   }
 
   bool _validate() {
     // all checks need to be true in order to continue
-    bool participants = _participants.length >= 2 && _participants.length <= 7;
+    bool participants =
+        _participants.length >= _minParticipants &&
+        _participants.length <= _maxParticipants;
     bool selected = _selectedRoom != null;
     bool contacts = _contacts != null;
 
@@ -413,27 +456,32 @@ class _ReservationFormState extends State<ReservationForm> {
   }
 
   void _submitReservation() async {
+    if (_submitting) return;
+
     if (!_validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Please complete all fields and select between 2 and 7 participants.',
+            'Please complete all fields and select between $_minParticipants and $_maxParticipants participants.',
           ),
         ),
       );
       return;
     }
-    if (_submitting) return;
+
+    final bool isAuthenticated = await localAuth("Confirm Booking Request");
+    if (!isAuthenticated) return;
+
     _submitting = true;
 
-    final authToken = await _auth!.getToken();
+    final authToken = await _auth.getToken();
 
     if (authToken == null) {
       _submitting = false;
       return;
     }
 
-    final Account? user = await _library.getMyAccount(authToken);
+    final Account? user = await _library.getMyProfile(authToken);
 
     if (user == null) {
       _submitting = false;
@@ -443,7 +491,7 @@ class _ReservationFormState extends State<ReservationForm> {
     final List<Student> participants =
         _participants.map<Student>((key) => _contacts![key]!).toList();
 
-    final Booking? bookingResult = await LibraryService().postBooking(
+    final StreamedResponse resp = await LibraryService().postBooking(
       user,
       _selectedRoom!,
       _start,
@@ -453,16 +501,34 @@ class _ReservationFormState extends State<ReservationForm> {
       authToken,
     );
 
-    String message = "Booking unsuccessful";
+    if (resp.statusCode == 401) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Error: Unauthorized!")));
+      }
+      return;
+    }
 
-    if (bookingResult != null) {
+    final jsonContent = jsonDecode(await resp.stream.bytesToString());
+
+    String message = "";
+
+    if (resp.statusCode != 200) {
+      message =
+          "Booking unsuccessful: ${jsonContent['message'] ?? resp.statusCode}";
+      _submitting = false;
+    } else {
+      final Booking b = Booking.fromJson(postBookingJson: jsonContent);
       message =
           'Reservation booked for ${DateFormat('yyyy-MM-dd').format(_date)} from ${formatTime(_start)} to ${formatTime(_end)} with participants: ${participants.map((s) => s.name).join(', ')}';
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 
   bool _withinOpenHours(TimeOfDay dt) {

@@ -21,6 +21,7 @@ enum Endpoint {
   // takes 800ms, use with ?timestamp
   myProfile("/rest/member/user/accounts/myProfile", 0),
   myBookings("/rest/council/user/bookings", 0),
+  myBookingStats("/rest/council/user/resourceCateBookingStats", 0),
 
   // Council - User
 
@@ -31,7 +32,7 @@ enum Endpoint {
   //Cates
   categoryPager("/rest/council/user/resourceCates/pager", 0),
   branchesPager("/rest/admin/common/branchs/pager", 0),
-  // https://sms.lib.ntu.edu.tw/rest/council/user/bookings/pager?queryString={"status":"Y,E,U,L,I"}&pagerString={"pageSize":-1,"sortColumnName":"bookingStartDate"}&bookingStartDate=2025-03-22&timeStamp=1742662402564
+  conferenceRoomsPager("/rest/council/common/conferenceRooms/pager", 0),
   reservationsPager("/rest/council/user/bookings/pager", 0),
   // Room details
   availRooms("rest/council/user/resourceAndBookings/available", 0),
