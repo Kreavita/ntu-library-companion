@@ -10,7 +10,6 @@ import 'package:ntu_library_companion/screens/profile/add_user_form.dart';
 import 'package:ntu_library_companion/screens/profile/booking_banner.dart';
 import 'package:ntu_library_companion/widgets/centered_content.dart';
 import 'package:ntu_library_companion/widgets/confirm_dialog.dart';
-import 'package:ntu_library_companion/widgets/info_row.dart';
 import 'package:ntu_library_companion/widgets/title_with_icon.dart';
 import 'package:provider/provider.dart';
 
@@ -102,12 +101,27 @@ class _ProfilePageState extends State<ProfilePage> {
                 (keys.isEmpty)
                     ? Column(
                       mainAxisAlignment: MainAxisAlignment.center,
+                      spacing: 8.0,
                       children: [
-                        Text("Empty Contacts", style: TextStyle(fontSize: 20)),
-                        InfoRow(
-                          icon: Icons.person_add_outlined,
-                          child: Text(
-                            "Add your fellow library goes by tapping the Button below.",
+                        Icon(Icons.group_off_outlined, size: 36),
+                        Text(
+                          "No Contacts added",
+                          style: TextStyle(fontSize: 20),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 32),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            spacing: 16.0,
+                            children: const [
+                              Icon(Icons.person_add_outlined),
+                              Expanded(
+                                child: Text(
+                                  "Many offerings can only be booked by a group of people. Add your fellow library-goers by tapping the Button below. (Login required)",
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],

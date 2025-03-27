@@ -74,6 +74,8 @@ class _ReservationBannerState extends State<ReservationBanner> {
             });
           },
           onTap: () async {
+            if (_settings?.get("credentials") == null) return;
+
             await Navigator.of(
               context,
             ).push(MaterialPageRoute(builder: (context) => BookingHistory()));
@@ -87,7 +89,9 @@ class _ReservationBannerState extends State<ReservationBanner> {
                         ? LinearProgressIndicator()
                         : Center(
                           child: Text(
-                            "No Active Reservation\nLong Press to reload - Tap to view booking History",
+                            (_settings?.get("credentials") == null)
+                                ? "Login required to view Reservations"
+                                : "No Active Reservation\nLong Press to reload - Tap to view booking History",
                             textAlign: TextAlign.center,
                           ),
                         )),

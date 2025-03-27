@@ -31,7 +31,7 @@ class WelcomeScreen extends StatelessWidget {
                     Padding(padding: EdgeInsets.symmetric(horizontal: 8)),
                     Expanded(
                       child: Text(
-                        "To make reservations and see available rooms and their capacites, you need to log in to your NTU account in the settings pane.",
+                        "To make reservations and see available offerings and their capacites, you need to log in to your NTU account in the settings pane.",
                       ),
                     ),
                   ],
@@ -55,11 +55,11 @@ class WelcomeScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   mainAxisSize: MainAxisSize.max,
                   children: const [
-                    Icon(Icons.arrow_forward),
+                    Icon(Icons.group_outlined),
                     Padding(padding: EdgeInsets.symmetric(horizontal: 8)),
                     Expanded(
                       child: Text(
-                        "Swipe to the right to view your recent roommates.",
+                        "Many offerings can only be booked by a group of people, swipe to the right or tap on 'Profile' to add your library-mates.",
                       ),
                     ),
                   ],

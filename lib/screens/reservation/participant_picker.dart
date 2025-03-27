@@ -56,25 +56,50 @@ class ParticipantPicker extends StatelessWidget {
             border: Border.all(color: colors.onSurface),
           ),
           height: 200,
-          child: ListView.builder(
-            itemCount: contacts.length,
-            itemBuilder: (context, i) {
-              final p = contacts[keys[i]]!;
-              if (participants.contains(keys[i])) {
-                return SizedBox.shrink();
-              }
-              final initials = p.name.split(" ").map((el) => el[0]).join("");
-              return ListTile(
-                leading: CircleAvatar(
-                  child: Text(initials.substring(0, min(3, initials.length))),
-                ),
-                trailing: Icon(Icons.add),
-                title: Text(p.name),
-                subtitle: Text(p.account),
-                onTap: () => onAdd(keys[i]),
-              );
-            },
-          ),
+          child:
+              (keys.isEmpty)
+                  ? SizedBox(
+                    width: double.infinity,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "No contacts to add",
+                          style: TextStyle(fontSize: 20),
+                        ),
+                        InfoRow(
+                          icon: Icons.person_add_outlined,
+                          child: Text(
+                            "You need to add them on the profile screen first.",
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                  : ListView.builder(
+                    itemCount: contacts.length,
+                    itemBuilder: (context, i) {
+                      final p = contacts[keys[i]]!;
+                      if (participants.contains(keys[i])) {
+                        return SizedBox.shrink();
+                      }
+                      final initials = p.name
+                          .split(" ")
+                          .map((el) => el[0])
+                          .join("");
+                      return ListTile(
+                        leading: CircleAvatar(
+                          child: Text(
+                            initials.substring(0, min(3, initials.length)),
+                          ),
+                        ),
+                        trailing: Icon(Icons.add),
+                        title: Text(p.name),
+                        subtitle: Text(p.account),
+                        onTap: () => onAdd(keys[i]),
+                      );
+                    },
+                  ),
         ),
       ],
     );
