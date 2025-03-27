@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:http/http.dart' as http;
 import 'package:ntu_library_companion/api/base_api.dart';
 import 'package:ntu_library_companion/model/auth_result.dart';
@@ -5,29 +7,51 @@ import 'package:ntu_library_companion/model/settings_provider.dart';
 
 class AuthService {
   static bool authFailed = false;
+  Completer<String?>? _tokenCompleter;
+  static DateTime _lastAuthSuccess = DateTime(1970);
 
   final SettingsProvider settings;
 
   AuthService({required this.settings});
 
+  /// Wrapper for `_getToken` to prevent concurrent login requests and
+  /// simplify setting the authFailed flag
   Future<String?> getToken({void Function(AuthResult res)? onResult}) async {
+    if (_tokenCompleter != null) {
+      // Wait for the ongoing authentication to complete
+      return await _tokenCompleter!.future;
+    }
+
+    _tokenCompleter = Completer<String?>();
+    final String? token;
+
+    try {
+      token = await _getToken(onResult: onResult);
+      _tokenCompleter!.complete(token);
+    } catch (e) {
+      rethrow;
+    } finally {
+      _tokenCompleter = null;
+    }
+
+    authFailed = (token == null);
+    return token;
+  }
+
+  Future<String?> _getToken({void Function(AuthResult res)? onResult}) async {
     if (settings.get("credentials") == null) {
-      authFailed = true;
       return null;
     }
-    authFailed = true;
     try {
       print("trying authToken...");
       String? authToken = await _getTokenHelper();
       if (authToken != null) {
-        authFailed = false;
         return authToken;
       }
 
       print("trying session...");
       authToken = await _getTokenHelper(invalidToken: true);
       if (authToken != null) {
-        authFailed = false;
         return authToken;
       }
 
@@ -83,7 +107,7 @@ class AuthService {
 
     if (invalidToken) {
       authToken = await _authAtSmsWithNtuSession(creds["ntuSession"]);
-      settings.set("authToken", authToken);
+      settings.set("authToken", authToken ?? "");
 
       if (authToken == null || authToken == "") {
         // Failed to get AuthToken, should regenerate Session
@@ -109,6 +133,11 @@ class AuthService {
       return null;
     }
 
+    if (DateTime.now().difference(_lastAuthSuccess).inMinutes < 30) {
+      print("found fresh token, skipping verification");
+      return authToken;
+    }
+
     // Test Token
     final resp = await request(
       method: Method.get,
@@ -130,6 +159,8 @@ class AuthService {
       }
       return null;
     }
+
+    _lastAuthSuccess = DateTime.now();
 
     return authToken;
   }
