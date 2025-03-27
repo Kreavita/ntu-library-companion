@@ -98,11 +98,16 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 ElevatedButton(
                   onPressed: () {
+                    if (_get("authToken") == "") return;
+
+                    _api.logout(_get("authToken"));
+                    _set("authToken", "");
+
                     ScaffoldMessenger.of(
                       context,
-                    ).showSnackBar(SnackBar(content: Text('Settings saved!')));
+                    ).showSnackBar(SnackBar(content: Text('Token deleted!')));
                   },
-                  child: Text("Save Settings"),
+                  child: Text("Reset Token"),
                 ),
               ],
             ),
