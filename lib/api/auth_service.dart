@@ -7,7 +7,7 @@ import 'package:ntu_library_companion/model/settings_provider.dart';
 
 class AuthService {
   static bool authFailed = false;
-  Completer<String?>? _tokenCompleter;
+  static Completer<String?>? _tokenCompleter;
   static DateTime _lastAuthSuccess = DateTime(1970);
 
   final SettingsProvider settings;
