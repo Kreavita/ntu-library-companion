@@ -8,6 +8,7 @@ class ConferenceRoom extends Room {
     required super.rid,
     required super.cateId,
     required super.name,
+    required super.type,
     required super.description,
     required super.floor,
     required super.attachmentId,
@@ -27,6 +28,7 @@ class ConferenceRoom extends Room {
       rid: json['rid'],
       cateId: json['cateId'],
       name: json['name'],
+      type: json['type'],
       description: json['description'],
       floor: "Unknown",
       attachmentId: aid, // Provide a default value if null
