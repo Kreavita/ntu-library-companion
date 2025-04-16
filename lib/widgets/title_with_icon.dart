@@ -15,9 +15,11 @@ class TitleWithIcon extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Icon(icon),
           ),
-          Text(
-            title,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+            ),
           ),
         ],
       ),
