@@ -212,20 +212,45 @@ class LibraryService {
     return Booking.fromJson(bookingJson: jsonData);
   }
 
-  Future<BookingStats?> getBookingStats(String authToken, Student user) async {
+  Future<bool> cancelBooking(String bid, String authToken) async {
+    /// PUT rest/council/user/bookings/{{bid}}/status/cancel
+    final uri = Uri.parse(
+      "${Endpoint.myBookings.uri().toString()}/$bid/status/cancel",
+    );
+    final bookingReq = await request(
+      method: Method.put,
+      uri: uri,
+      headers: {"authToken": authToken},
+    );
+    return bookingReq.statusCode == 200;
+  }
+
+  Future<bool> returnBooking(String bid, String authToken) async {
+    ///PUT rest/council/user/bookings/{{bid}}/status/useFinish
+    final uri = Uri.parse(
+      "${Endpoint.myBookings.uri().toString()}/$bid/status/useFinish",
+    );
+    final bookingReq = await request(
+      method: Method.put,
+      uri: uri,
+      headers: {"authToken": authToken},
+    );
+    return bookingReq.statusCode == 200;
+  }
+
+  Future<List<BookingStats>> getBookingStats(
+    String authToken,
+    Student user,
+  ) async {
     final ApiResult res = await get(
       endpoint: Endpoint.myBookingStats,
       params: {"userId": user.uuid},
       headers: {"authToken": authToken},
     );
 
-    if (res.statusCode != 200) return null;
-
+    if (res.statusCode != 200) return [];
     final jsonData = res.asJson<List>(fallback: []);
-
-    if (jsonData.isEmpty) return null;
-
-    return BookingStats.fromJson(jsonData.first);
+    return jsonData.map((x) => BookingStats.fromJson(x)).toList();
   }
 
   /// Log out from the SMS Library System

@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:ntu_library_companion/model/booking_stats.dart';
+import 'package:ntu_library_companion/model/category.dart';
 import 'package:ntu_library_companion/widgets/info_row.dart';
 
 class BookingStatsBanner extends StatelessWidget {
@@ -10,6 +11,10 @@ class BookingStatsBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bookingMeasurement =
+        (stats.bookingLimitFrequencyUnit == "HOR")
+            ? stats.bookingLimitPeriodBookingHour
+            : stats.bookingLimitPeriodBookingCount;
     return Padding(
       padding: EdgeInsets.all(8.0),
       child: Card(
@@ -27,14 +32,21 @@ class BookingStatsBanner extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Flexible(
-                    child: Text(
-                      "Your Statistics",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w500,
+                  Row(
+                    spacing: 4,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.meeting_room_outlined, size: 32),
+                      Flexible(
+                        child: Text(
+                          Category.zh2engName[stats.cateName] ?? stats.cateName,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                   (stats.bookingLimitViolation == "N")
                       ? Row(
@@ -42,9 +54,7 @@ class BookingStatsBanner extends StatelessWidget {
                           Icon(Icons.check, size: 24, color: Colors.green),
                           Text(
                             "No Violation",
-                            style: TextStyle(
-                              color: Theme.of(context).hintColor,
-                            ),
+                            style: TextStyle(color: Colors.green),
                           ),
                         ],
                       )
@@ -53,9 +63,7 @@ class BookingStatsBanner extends StatelessWidget {
                           Icon(Icons.block, size: 24, color: Colors.red),
                           Text(
                             "Restricted",
-                            style: TextStyle(
-                              color: Theme.of(context).hintColor,
-                            ),
+                            style: TextStyle(color: Colors.red),
                           ),
                         ],
                       ),
@@ -81,7 +89,7 @@ class BookingStatsBanner extends StatelessWidget {
                   Text("Current Usage: "),
                   Expanded(
                     child: Text(
-                      "${stats.bookingLimitPeriodBookingHour} of ${stats.bookingLimitFrequencyCount} hrs",
+                      "$bookingMeasurement of ${stats.bookingLimitFrequencyCount} ${stats.friendlyLimitUnit}",
                       textAlign: TextAlign.end,
                     ),
                   ),
@@ -91,18 +99,14 @@ class BookingStatsBanner extends StatelessWidget {
                 minHeight: 20,
                 borderRadius: BorderRadius.circular(40),
                 value: min(
-                  max(
-                    0,
-                    stats.bookingLimitPeriodBookingHour /
-                        stats.bookingLimitFrequencyCount,
-                  ),
+                  max(0, bookingMeasurement / stats.bookingLimitFrequencyCount),
                   1,
                 ),
               ),
               InfoRow(
                 icon: Icons.info_outline,
                 child: Text(
-                  "The usage is limited to ${stats.bookingLimitFrequencyCount} hrs within ${stats.bookingLimitPeriodCount * 7} days",
+                  "Usage limited to ${stats.bookingLimitFrequencyCount} ${stats.friendlyLimitUnit} within ${stats.bookingLimitPeriodCount} ${stats.friendlyPeriodUnit}",
                 ),
               ),
             ],

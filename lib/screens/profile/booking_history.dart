@@ -1,13 +1,16 @@
+import 'package:expandable_page_view/expandable_page_view.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:ntu_library_companion/api/auth_service.dart';
 import 'package:ntu_library_companion/api/library_service.dart';
 import 'package:ntu_library_companion/model/booking.dart';
 import 'package:ntu_library_companion/model/booking_stats.dart';
+import 'package:ntu_library_companion/model/category.dart';
 import 'package:ntu_library_companion/model/settings_provider.dart';
 import 'package:ntu_library_companion/model/student.dart';
 import 'package:ntu_library_companion/screens/profile/booking_stats_banner.dart';
 import 'package:ntu_library_companion/widgets/centered_content.dart';
+import 'package:ntu_library_companion/widgets/page_indicator.dart';
 import 'package:ntu_library_companion/widgets/title_with_icon.dart';
 import 'package:provider/provider.dart';
 
@@ -18,7 +21,8 @@ class BookingHistory extends StatefulWidget {
   State<BookingHistory> createState() => _BookingHistoryState();
 }
 
-class _BookingHistoryState extends State<BookingHistory> {
+class _BookingHistoryState extends State<BookingHistory>
+    with TickerProviderStateMixin {
   final LibraryService _library = LibraryService();
   AuthService? _auth;
   SettingsProvider? _settings;
@@ -26,7 +30,41 @@ class _BookingHistoryState extends State<BookingHistory> {
   bool _fetching = false;
   bool _complete = false;
   List<Booking> _history = [];
-  BookingStats? _bookingStats;
+  List<BookingStats> _bookingStats = [];
+
+  late PageController _pageViewController;
+  late TabController _tabController;
+  int _currentPageIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageViewController = PageController();
+    _tabController = TabController(length: 0, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _pageViewController.dispose();
+    _tabController.dispose();
+  }
+
+  void _updateCurrentPageIndex(int index) {
+    _tabController.index = index;
+    _pageViewController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _handlePageViewChanged(int currentPageIndex) {
+    _tabController.index = currentPageIndex;
+    setState(() {
+      _currentPageIndex = currentPageIndex;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +84,25 @@ class _BookingHistoryState extends State<BookingHistory> {
                     if (index == 0) {
                       return Column(
                         children: [
-                          BookingStatsBanner(stats: _bookingStats!),
+                          TitleWithIcon(
+                            icon: Icons.area_chart_sharp,
+                            title: "Your Statistics:",
+                          ),
+                          ExpandablePageView(
+                            /// [PageView.scrollDirection] defaults to [Axis.horizontal].
+                            /// Use [Axis.vertical] to scroll vertically.
+                            controller: _pageViewController,
+                            onPageChanged: _handlePageViewChanged,
+                            children:
+                                _bookingStats
+                                    .map((bs) => BookingStatsBanner(stats: bs))
+                                    .toList(),
+                          ),
+                          PageIndicator(
+                            tabController: _tabController,
+                            currentPageIndex: _currentPageIndex,
+                            onUpdateCurrentPageIndex: _updateCurrentPageIndex,
+                          ),
                           TitleWithIcon(
                             icon: Icons.replay,
                             title: "Recent Bookings:",
@@ -59,11 +115,25 @@ class _BookingHistoryState extends State<BookingHistory> {
                       'MMM d, HH:mm',
                     ).format(b.bookingStartDate);
                     final to = DateFormat('HH:mm').format(b.bookingEndDate);
+                    final bStatus = b.friendlyStatus(context);
 
                     return Column(
                       children: [
                         ListTile(
-                          trailing: interpretStatus(b.status),
+                          trailing: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            mainAxisSize: MainAxisSize.max,
+                            children: [
+                              Icon(bStatus.icon, color: bStatus.color),
+                              Text(
+                                bStatus.message,
+                                style: TextStyle(
+                                  color: bStatus.color,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
                           title: Padding(
                             padding: const EdgeInsets.only(bottom: 8.0),
                             child: Row(
@@ -72,7 +142,11 @@ class _BookingHistoryState extends State<BookingHistory> {
                                   padding: const EdgeInsets.only(right: 8.0),
                                   child: Icon(Icons.sensor_door_outlined),
                                 ),
-                                Text("Room '${b.room.name}'"),
+                                Expanded(
+                                  child: Text(
+                                    "${Category.type2engName[b.room.type]} ${b.room.name}",
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -136,72 +210,12 @@ class _BookingHistoryState extends State<BookingHistory> {
       _settings!.get('accountHolder') as Student,
     );
 
+    _tabController = TabController(length: _bookingStats.length, vsync: this);
+
     if (mounted) {
       setState(() {
         _complete = true;
       });
     }
-  }
-
-  Widget interpretStatus(String status) {
-    Icon icon = Icon(
-      Icons.question_mark,
-      color: Theme.of(context).colorScheme.error,
-    );
-    String message = "Unknown";
-    switch (status) {
-      case "Z":
-        message = "Absent timeout";
-        icon = Icon(
-          Icons.warning_amber,
-          color: Theme.of(context).colorScheme.error,
-        );
-        break;
-      case "O":
-        message = "Report timeout";
-        icon = Icon(
-          Icons.warning_amber,
-          color: Theme.of(context).colorScheme.error,
-        );
-        break;
-      case "F":
-        message = "Finished";
-        icon = Icon(Icons.event_available_outlined);
-        break;
-      case "T":
-        message = "Aborted";
-        icon = Icon(Icons.event_busy_outlined, color: Colors.pinkAccent);
-        break;
-      case "Y":
-        message = "Reserved";
-        icon = Icon(Icons.check, color: Colors.green);
-        break;
-      case "L":
-        message = "Leave temporarily";
-        icon = Icon(Icons.exit_to_app, color: Colors.purpleAccent);
-        break;
-      case "U":
-        message = "In use";
-        icon = Icon(
-          Icons.play_circle,
-          color: Theme.of(context).colorScheme.primary,
-        );
-        break;
-      case "C":
-        message = "Cancelled";
-        icon = Icon(Icons.free_cancellation_outlined, color: Colors.cyan);
-        break;
-      case "I":
-        message = "Reporting";
-        icon = Icon(Icons.refresh);
-        break;
-      default:
-        break;
-    }
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      mainAxisSize: MainAxisSize.max,
-      children: [icon, Text(message)],
-    );
   }
 }

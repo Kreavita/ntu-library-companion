@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:ntu_library_companion/model/booking.dart';
+import 'package:ntu_library_companion/model/category.dart';
 
 class ReservationInfo extends StatefulWidget {
   final Booking booking;
@@ -20,6 +21,8 @@ class _ReservationInfoState extends State<ReservationInfo> {
       widget.booking.bookingStartDate.add(Duration(minutes: 15)),
     );
 
+    BookingStatus bStatus = widget.booking.friendlyStatus(context);
+
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
@@ -29,13 +32,28 @@ class _ReservationInfoState extends State<ReservationInfo> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              //Icon(Icons.meeting_room_outlined, size: 32),
               Flexible(
                 child: Text(
-                  "Booked: Room ${widget.booking.room.name}",
+                  "Booked: ${Category.type2engName[widget.booking.room.type] ?? "Room"} ${widget.booking.room.name}",
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
                 ),
               ),
-              Icon(Icons.meeting_room_outlined, size: 32),
+              Row(
+                spacing: 4.0,
+                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  Icon(bStatus.icon, color: bStatus.color),
+                  Text(
+                    bStatus.message,
+                    style: TextStyle(
+                      color: bStatus.color,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
           Row(
@@ -56,21 +74,26 @@ class _ReservationInfoState extends State<ReservationInfo> {
           ),
           Padding(
             padding: const EdgeInsets.only(top: 8.0),
-            child: Text("Participants: "),
-          ),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Wrap(
-              spacing: 5.0,
-              children:
-                  widget.booking.bookingParticipants.map((bp) {
-                    return Chip(
-                      avatar: Icon(Icons.account_circle_outlined),
-                      label: Text(bp.name),
-                    );
-                  }).toList(),
+            child: Text(
+              widget.booking.bookingParticipants.isEmpty
+                  ? "No participants"
+                  : "Participants: ",
             ),
           ),
+          if (widget.booking.bookingParticipants.isNotEmpty)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Wrap(
+                spacing: 5.0,
+                children:
+                    widget.booking.bookingParticipants.map((bp) {
+                      return Chip(
+                        avatar: Icon(Icons.account_circle_outlined),
+                        label: Text(bp.name),
+                      );
+                    }).toList(),
+              ),
+            ),
         ],
       ),
     );
