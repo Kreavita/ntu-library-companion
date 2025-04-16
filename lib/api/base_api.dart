@@ -18,6 +18,8 @@ enum Endpoint {
 
   // Basic
 
+  enTranslation("/assets/i18n/en.json", 0),
+
   // takes 800ms, use with ?timestamp
   myProfile("/rest/member/user/accounts/myProfile", 0),
   myBookings("/rest/council/user/bookings", 0),
