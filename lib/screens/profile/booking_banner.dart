@@ -82,7 +82,8 @@ class _ReservationBannerState extends State<ReservationBanner> {
           },
           child: Padding(
             padding: EdgeInsets.all(8.0),
-            child:
+            child: Column(
+              children: [
                 (_booking != null)
                     ? ReservationInfo(booking: _booking!)
                     : ((_fetchStarted && !_fetchCompleted)
@@ -91,10 +92,13 @@ class _ReservationBannerState extends State<ReservationBanner> {
                           child: Text(
                             (_settings?.get("credentials") == null)
                                 ? "Login required to view Reservations"
-                                : "No Active Reservation\nLong Press to reload - Tap to view booking History",
+                                : "No Active Reservation",
                             textAlign: TextAlign.center,
                           ),
                         )),
+                Text("Long Press to reload - Tap to view booking History"),
+              ],
+            ),
           ),
         ),
       ),
