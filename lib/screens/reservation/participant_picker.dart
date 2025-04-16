@@ -38,16 +38,21 @@ class ParticipantPicker extends StatelessWidget {
                     icon: Icons.info_outline,
                     child: Text("Selected Participants will appear here."),
                   )
-                  : Wrap(
-                    spacing: 5.0,
-                    children:
-                        participants.map((i) {
-                          return Chip(
-                            avatar: Icon(Icons.account_circle_outlined),
-                            label: Text(contacts[i]!.name),
-                            onDeleted: () => onDelete(i),
-                          );
-                        }).toList(),
+                  : SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+
+                    scrollDirection: Axis.horizontal,
+                    child: Wrap(
+                      spacing: 5.0,
+                      children:
+                          participants.map((i) {
+                            return Chip(
+                              avatar: Icon(Icons.account_circle_outlined),
+                              label: Text(contacts[i]!.name),
+                              onDeleted: () => onDelete(i),
+                            );
+                          }).toList(),
+                    ),
                   ),
         ),
         Container(

@@ -437,6 +437,14 @@ class _ReservationFormState extends State<ReservationForm> {
           ),
         ),
       );
+    } else if (!_notInThePast()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Error: Timespan must not be more than 30 minutes in the past.',
+          ),
+        ),
+      );
     }
   }
 
@@ -445,7 +453,7 @@ class _ReservationFormState extends State<ReservationForm> {
     bool minTimespan = difference >= widget.minHours * 60;
     bool maxTimespan = difference <= widget.maxHours * 60;
     bool openHours = _withinOpenHours(_start) && _withinOpenHours(_end);
-    return minTimespan && maxTimespan && openHours;
+    return minTimespan && maxTimespan && openHours && _notInThePast();
   }
 
   bool _validate() {
@@ -544,5 +552,15 @@ class _ReservationFormState extends State<ReservationForm> {
     }
     return (dt.isAfter(ttEntry[0]) || dt.isAtSameTimeAs(ttEntry[0])) &&
         (dt.isBefore(ttEntry[1]) || dt.isAtSameTimeAs(ttEntry[1]));
+  }
+
+  bool _notInThePast() {
+    return _date
+            .copyWith(hour: _end.hour, minute: _end.minute)
+            .isAfter(DateTime.now()) &&
+        _date
+            .copyWith(hour: _start.hour, minute: _start.minute)
+            .add(Duration(minutes: 31))
+            .isAfter(DateTime.now());
   }
 }

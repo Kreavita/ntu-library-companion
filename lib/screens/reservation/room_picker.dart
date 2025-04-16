@@ -43,6 +43,8 @@ class _RoomPickerState extends State<RoomPicker> {
   final List<Room> _rooms = [];
   String _selectedRid = "";
 
+  bool _fetchComplete = false;
+
   @override
   Widget build(BuildContext context) {
     _updateRoomsList(context);
@@ -55,7 +57,9 @@ class _RoomPickerState extends State<RoomPicker> {
       ),
       height: 200,
       child:
-          (_rooms.isEmpty || !widget.validSelection)
+          (!_fetchComplete)
+              ? Center(child: CircularProgressIndicator.adaptive())
+              : (_rooms.isEmpty || !widget.validSelection)
               ? Padding(
                 padding: const EdgeInsets.all(32.0),
                 child: Center(
@@ -113,7 +117,14 @@ class _RoomPickerState extends State<RoomPicker> {
       return;
     }
 
+    setState(() {
+      _fetchComplete = false;
+    });
+
     if (widget.authToken == "" || !widget.validSelection) {
+      setState(() {
+        _fetchComplete = true;
+      });
       return;
     }
 
@@ -142,6 +153,7 @@ class _RoomPickerState extends State<RoomPicker> {
     final jsonObj = res.asJson<List>(fallback: []);
 
     setState(() {
+      _fetchComplete = true;
       _rooms.clear();
       _rooms.addAll(jsonObj.map<Room>((o) => Room.fromJson(o)));
     });
