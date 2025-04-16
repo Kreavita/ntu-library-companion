@@ -33,7 +33,7 @@ class CategoryCard extends StatelessWidget {
                 ),
               SizedBox(height: 8),
               Text(
-                cat.name,
+                cat.engName,
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 4),

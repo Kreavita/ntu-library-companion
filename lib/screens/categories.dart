@@ -93,6 +93,10 @@ class CategoriesPageState extends State<CategoriesPage>
     if (authToken == null) return;
 
     final cates = await _library.getCategories(authToken);
+    cates.forEach((_, cat) {
+      Category.type2engName[cat.type] = cat.engName;
+      Category.zh2engName[cat.name] = cat.engName;
+    });
 
     setState(() {
       _cates.clear();

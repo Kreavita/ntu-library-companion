@@ -103,7 +103,7 @@ class _CategoryDetailsState extends State<CategoryDetails>
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Text(
-                      cate.name,
+                      cate.engName,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 24,

@@ -4,7 +4,9 @@ import 'package:ntu_library_companion/util.dart';
 /// A Category is a Rentable Type of Room or Service that the library offers
 class Category {
   final String catId;
+  final String type;
   final String name;
+  final String engName;
   final String description;
   final String attachmentId;
   final Branch branch;
@@ -14,9 +16,14 @@ class Category {
   final Map<String, dynamic> bookingPolicy;
   final Map<String, dynamic> openPolicy;
 
+  static Map<String, String> type2engName = {};
+  static Map<String, String> zh2engName = {};
+
   Category({
     required this.catId,
+    required this.type,
     required this.name,
+    required this.engName,
     required this.description,
     required this.attachmentId,
     required this.branch,
@@ -35,7 +42,9 @@ class Category {
     List<dynamic> attachments = jsonObj["resourceCateAttachs"];
     return Category(
       catId: jsonObj['cateId'] as String,
-      name: cleanHtml(jsonObj['engName'] as String),
+      type: jsonObj['type'],
+      name: cleanHtml(jsonObj['name'] as String),
+      engName: cleanHtml(jsonObj['engName'] as String),
       description: cleanHtml(jsonObj['description'] ?? "No Description"),
       attachmentId: attachments.firstOrNull?["aid"] ?? "",
       branch: Branch.fromJson(jsonObj["branch"]),
