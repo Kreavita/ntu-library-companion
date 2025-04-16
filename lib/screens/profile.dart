@@ -3,7 +3,9 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:ntu_library_companion/api/auth_service.dart';
+import 'package:ntu_library_companion/api/library_service.dart';
 import 'package:ntu_library_companion/model/auth_result.dart';
+import 'package:ntu_library_companion/model/booking.dart';
 import 'package:ntu_library_companion/model/settings_provider.dart';
 import 'package:ntu_library_companion/model/student.dart';
 import 'package:ntu_library_companion/screens/profile/add_user_form.dart';
@@ -26,6 +28,9 @@ class _ProfilePageState extends State<ProfilePage> {
   StreamSubscription<dynamic>? _streamSubscription;
   SettingsProvider? _settings;
   AuthService? _auth;
+
+  final LibraryService _api = LibraryService();
+  bool _fetchCompleted = true;
 
   @override
   initState() {
@@ -83,6 +88,36 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  void _addFromHistory() async {
+    if (!_fetchCompleted) return;
+    Map<String, Student> updatedList =
+        _settings!.get("contacts") ?? <String, Student>{};
+
+    setState(() {
+      _fetchCompleted = false;
+    });
+
+    final token = await _auth!.getToken();
+
+    if (token == null) {
+      return;
+    }
+
+    final bookings = await _api.getBookings(token, includePast: true);
+
+    for (Booking booking in bookings) {
+      final participants = booking.bookingParticipants;
+      for (Student participant in participants) {
+        updatedList[participant.uuid] = participant;
+      }
+    }
+
+    setState(() {
+      _fetchCompleted = true;
+      _settings!.set("contacts", updatedList);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     _settings ??= Provider.of<SettingsProvider>(context);
@@ -107,6 +142,19 @@ class _ProfilePageState extends State<ProfilePage> {
                         Text(
                           "No Contacts added",
                           style: TextStyle(fontSize: 20),
+                        ),
+                        OutlinedButton(
+                          onPressed: _fetchCompleted ? _addFromHistory : null,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            spacing: 8,
+                            children: [
+                              _fetchCompleted
+                                  ? Icon(Icons.auto_mode_outlined)
+                                  : CircularProgressIndicator.adaptive(),
+                              Flexible(child: Text("Import From History")),
+                            ],
+                          ),
                         ),
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 32),
