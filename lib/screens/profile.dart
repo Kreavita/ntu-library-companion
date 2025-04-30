@@ -6,6 +6,7 @@ import 'package:ntu_library_companion/api/auth_service.dart';
 import 'package:ntu_library_companion/api/library_service.dart';
 import 'package:ntu_library_companion/model/auth_result.dart';
 import 'package:ntu_library_companion/model/booking.dart';
+import 'package:ntu_library_companion/model/conference_room.dart';
 import 'package:ntu_library_companion/model/settings_provider.dart';
 import 'package:ntu_library_companion/model/student.dart';
 import 'package:ntu_library_companion/screens/profile/add_user_form.dart';
@@ -24,13 +25,20 @@ class ProfilePage extends StatefulWidget {
   State<StatefulWidget> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfilePageState extends State<ProfilePage>
+    with AutomaticKeepAliveClientMixin {
   StreamSubscription<dynamic>? _streamSubscription;
   SettingsProvider? _settings;
   AuthService? _auth;
 
   final LibraryService _api = LibraryService();
   bool _fetchCompleted = true;
+
+  bool _updateBookingsComplete = true;
+  final Map<String, Booking> _contactStates = {};
+  Booking? _booking;
+
+  bool _firstRun = true;
 
   @override
   initState() {
@@ -118,19 +126,119 @@ class _ProfilePageState extends State<ProfilePage> {
     });
   }
 
+  void _updateBookingInfos() async {
+    _firstRun = false;
+    if (!_updateBookingsComplete) return;
+
+    setState(() {
+      _booking = null;
+      _updateBookingsComplete = false;
+    });
+
+    final token = await _auth!.getToken();
+
+    await () async {
+      if (token == null) return;
+
+      final Map<String, Student> contacts = _settings?.get("contacts") ?? {};
+      final String userAccount = _settings?.get("credentials")?["user"] ?? "";
+
+      if (contacts.isEmpty) return;
+
+      final now = DateTime.now();
+      final Map<String, Booking> newStates = {};
+
+      Map<ConferenceRoom, List<Booking>> confRoomBookings = await _api
+          .getConfRoomBookings(token, now, now.add(Duration(days: 1)));
+
+      confRoomBookings.forEach((room, bookings) {
+        for (final booking in bookings) {
+          List<String> participantIds =
+              booking.bookingParticipants.map((s) => s.uuid).toList() +
+              [booking.host.uuid];
+
+          List<String> participantAccounts =
+              booking.bookingParticipants
+                  .map((s) => s.account.toLowerCase())
+                  .toList() +
+              [booking.host.account.toLowerCase()];
+
+          if (participantAccounts.contains(userAccount.toLowerCase())) {
+            _booking = booking;
+            _booking!.bookingParticipants.add(
+              Student(
+                uuid: booking.host.uuid,
+                account: booking.host.account,
+                name: booking.host.name,
+              ),
+            );
+            _booking!.bookingParticipants.sort(
+              (s1, s2) => s1.name.compareTo(s2.name),
+            );
+          }
+
+          for (var uuid in contacts.keys) {
+            if (!participantIds.contains(uuid)) continue;
+            if (booking.bookingEndDate.isBefore(DateTime.now())) continue;
+            if (booking.bookingStartDate.isAfter(DateTime.now())) continue;
+
+            newStates[uuid] = booking;
+          }
+
+          if (contacts.length == newStates.length) return;
+        }
+      });
+
+      _contactStates.clear();
+      _contactStates.addAll(newStates);
+    }();
+
+    setState(() {
+      _updateBookingsComplete = true;
+    });
+
+    if (_booking == null && token != null) {
+      setState(() {
+        _updateBookingsComplete = false;
+      });
+
+      _booking = (await _api.getBookings(token)).firstOrNull;
+
+      setState(() {
+        _updateBookingsComplete = true;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     _settings ??= Provider.of<SettingsProvider>(context);
     _auth ??= AuthService(settings: _settings!);
 
     final Map<String, Student> contacts = _settings!.get("contacts") ?? {};
     final keys = contacts.keys.toList();
 
+    if (_firstRun) _updateBookingInfos();
+
     return CenterContent(
       child: Column(
         children: [
-          ReservationBanner(),
-          TitleWithIcon(icon: Icons.people, title: "Contacts:"),
+          ReservationBanner(
+            onRefresh: _updateBookingInfos,
+            booking: _booking,
+            loggedIn: _settings!.get("credentials") != null,
+            finishedRequest: _updateBookingsComplete,
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              Expanded(
+                child: TitleWithIcon(icon: Icons.people, title: "Contacts:"),
+              ),
+            ],
+          ),
           Expanded(
             child:
                 (keys.isEmpty)
@@ -183,6 +291,13 @@ class _ProfilePageState extends State<ProfilePage> {
                             .map((el) => el[0])
                             .join("");
 
+                        String roomInfo = "";
+
+                        if (_contactStates.containsKey(c.uuid)) {
+                          roomInfo =
+                              " – Room ${_contactStates[c.uuid]!.room.name}";
+                        }
+
                         return ListTile(
                           leading: CircleAvatar(
                             child: Text(
@@ -212,7 +327,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             icon: Icon(Icons.person_remove_outlined),
                           ),
                           title: Text(c.name),
-                          subtitle: Text(c.account),
+                          subtitle: Text(c.account + roomInfo),
                           onTap: () {},
                         );
                       },
@@ -222,4 +337,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
+
+  @override
+  bool get wantKeepAlive => true;
 }

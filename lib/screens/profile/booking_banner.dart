@@ -1,64 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:ntu_library_companion/api/auth_service.dart';
-import 'package:ntu_library_companion/api/library_service.dart';
+import 'package:intl/intl.dart';
+import 'package:ntu_library_companion/model/account.dart';
 import 'package:ntu_library_companion/model/booking.dart';
-import 'package:ntu_library_companion/model/settings_provider.dart';
+import 'package:ntu_library_companion/model/category.dart';
 import 'package:ntu_library_companion/screens/profile/booking_history.dart';
-import 'package:ntu_library_companion/screens/reservation/reservation_info.dart';
-import 'package:provider/provider.dart';
 
-class ReservationBanner extends StatefulWidget {
-  const ReservationBanner({super.key});
+class ReservationBanner extends StatelessWidget {
+  final void Function() onRefresh;
+  final Booking? booking;
+  final bool loggedIn;
+  final bool finishedRequest;
+  final Widget? footer;
 
-  @override
-  State<ReservationBanner> createState() => _ReservationBannerState();
-}
-
-class _ReservationBannerState extends State<ReservationBanner> {
-  final LibraryService _lib = LibraryService();
-
-  AuthService? _auth;
-  SettingsProvider? _settings;
-
-  Booking? _booking;
-
-  bool _fetchStarted = false;
-  bool _fetchCompleted = false;
-
-  void _fetchBookingInfo() async {
-    if (_fetchStarted && !_fetchCompleted) return;
-
-    _fetchStarted = true;
-    _fetchCompleted = false;
-
-    final token = await _auth!.getToken();
-
-    if (token == null) {
-      _fetchCompleted = true;
-      return;
-    }
-
-    List<Booking> bookings = await _lib.getBookings(token);
-
-    if (bookings.isNotEmpty) _booking = bookings.first;
-    _fetchCompleted = true;
-
-    if (mounted) {
-      setState(() {});
-    }
-  }
+  const ReservationBanner({
+    super.key,
+    required this.onRefresh,
+    required this.booking,
+    required this.finishedRequest,
+    required this.loggedIn,
+    this.footer,
+  });
 
   @override
   Widget build(BuildContext context) {
-    _settings ??= Provider.of<SettingsProvider>(context);
-    _auth ??= AuthService(settings: _settings!);
-
-    if (_settings?.get("credentials") != null &&
-        !_fetchStarted &&
-        !AuthService.authFailed) {
-      _fetchBookingInfo();
-    }
-
     return Padding(
       padding: const EdgeInsets.all(4.0),
       child: Card(
@@ -67,40 +31,124 @@ class _ReservationBannerState extends State<ReservationBanner> {
           borderRadius: BorderRadius.circular(8),
         ),
         child: InkWell(
-          onLongPress: () {
-            setState(() {
-              _fetchStarted = false;
-              _fetchCompleted = false;
-            });
-          },
-          onTap: () async {
-            if (_settings?.get("credentials") == null) return;
-
-            await Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (context) => BookingHistory()));
-          },
+          onLongPress: loggedIn ? onRefresh : null,
+          onTap:
+              loggedIn
+                  ? () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => BookingHistory()),
+                  )
+                  : null,
           child: Padding(
             padding: EdgeInsets.all(8.0),
             child: Column(
               children: [
-                (_booking != null)
-                    ? ReservationInfo(booking: _booking!)
-                    : ((_fetchStarted && !_fetchCompleted)
-                        ? LinearProgressIndicator()
-                        : Center(
+                (booking != null)
+                    ? _buildBannerContent(context, booking!)
+                    : ((finishedRequest)
+                        ? Center(
                           child: Text(
-                            (_settings?.get("credentials") == null)
-                                ? "Login required to view Reservations"
-                                : "No Active Reservation",
+                            loggedIn
+                                ? "No active reservation"
+                                : "Login required to view reservations",
                             textAlign: TextAlign.center,
                           ),
-                        )),
-                Text("Long Press to reload - Tap to view booking History"),
+                        )
+                        : LinearProgressIndicator()),
+                Text("Long press to reload - Tap for booking history"),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildBannerContent(BuildContext context, Booking booking) {
+    DateFormat df = DateFormat("d/M/y HH:mm");
+    String start = df.format(booking.bookingStartDate);
+    String end = DateFormat("HH:mm").format(booking.bookingEndDate);
+    String checkIn = df.format(
+      booking.bookingStartDate.add(Duration(minutes: 15)),
+    );
+
+    BookingStatus bStatus = booking.friendlyStatus(context);
+
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 5,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              //Icon(Icons.meeting_room_outlined, size: 32),
+              Flexible(
+                child: Text(
+                  "Booked: ${Category.type2engName[booking.room.type] ?? "Room"} ${booking.room.name}",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+                ),
+              ),
+              Row(
+                spacing: 4.0,
+                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  Icon(bStatus.icon, color: bStatus.color),
+                  Text(
+                    bStatus.message,
+                    style: TextStyle(
+                      color: bStatus.color,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          Row(
+            spacing: 5,
+            children: [
+              Icon(Icons.timelapse_outlined),
+              Text("Timespan: "),
+              Expanded(child: Text("$start - $end", textAlign: TextAlign.end)),
+            ],
+          ),
+          Row(
+            spacing: 5,
+            children: [
+              Icon(Icons.alarm),
+              Text("Check-In before: "),
+              Expanded(child: Text(checkIn, textAlign: TextAlign.end)),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(
+              booking.bookingParticipants.isEmpty
+                  ? "No participants"
+                  : "Participants: ",
+            ),
+          ),
+          if (booking.bookingParticipants.isNotEmpty)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Wrap(
+                spacing: 5.0,
+                children:
+                    (booking.bookingParticipants + [booking.host]).map((bp) {
+                      return Chip(
+                        avatar: Icon(Icons.account_circle_outlined),
+                        label: Text(bp.name),
+                        backgroundColor:
+                            (bp.runtimeType == Account)
+                                ? Theme.of(context).primaryColor
+                                : null,
+                      );
+                    }).toList(),
+              ),
+            ),
+        ],
       ),
     );
   }
