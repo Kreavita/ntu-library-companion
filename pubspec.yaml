@@ -45,6 +45,8 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   expandable_page_view: ^1.0.17
+  shared_preferences: ^2.5.3
+  flutter_cache_manager: ^3.4.1
 
 dev_dependencies:
   flutter_test:

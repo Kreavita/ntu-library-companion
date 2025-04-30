@@ -31,11 +31,12 @@ enum Endpoint {
   myAccount("/rest/council/user/memberAccounts/myAccount", 0),
   violationsPager("/rest/council/user/bookingViolationDetails/pager", 0),
   suspensionsPager("/rest/council/user/suspensionRecords/pager", 0),
+  reservationsPager("/rest/council/user/bookings/pager", 0),
   //Cates
   categoryPager("/rest/council/user/resourceCates/pager", 0),
   branchesPager("/rest/admin/common/branchs/pager", 0),
   conferenceRoomsPager("/rest/council/common/conferenceRooms/pager", 0),
-  reservationsPager("/rest/council/user/bookings/pager", 0),
+  bookingsPager("/rest/council/common/bookings/pager", 0),
   // Room details
   availRooms("rest/council/user/resourceAndBookings/available", 0),
 

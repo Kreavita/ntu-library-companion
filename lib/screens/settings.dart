@@ -10,6 +10,8 @@ import 'package:ntu_library_companion/util.dart';
 import 'package:ntu_library_companion/widgets/centered_content.dart';
 import 'package:ntu_library_companion/widgets/confirm_dialog.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -23,14 +25,6 @@ class _SettingsPageState extends State<SettingsPage> {
     context,
   );
   final LibraryService _api = LibraryService();
-
-  _get(String key) {
-    return _settings.get(key);
-  }
-
-  void _set(String key, dynamic value) {
-    _settings.set(key, value);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,9 +43,9 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             Text('Settings', style: TextStyle(fontSize: 24)),
             Padding(padding: const EdgeInsets.symmetric(vertical: 16)),
-            (_get("credentials") != null)
+            (_settings.get("credentials") != null)
                 ? SettingTile(
-                  name: _get("accountHolder")?.name ?? "Logged in",
+                  name: _settings.get("accountHolder")?.name ?? "Logged in",
                   description: "Tap to view your account",
                   //_get("credentials")["user"],
                   onTap: () async {
@@ -88,26 +82,70 @@ class _SettingsPageState extends State<SettingsPage> {
               tiles: [
                 SwitchListTile(
                   title: Text("Enable Notifications"),
-                  value: _get('notifications') ?? false,
-                  onChanged: (bool value) => _set('notifications', value),
+                  value: _settings.get('notifications') ?? false,
+                  onChanged: null,
+                  //(bool value) => _settings.set('notifications', value),
                 ),
                 SwitchListTile(
                   title: Text("Dark Mode"),
-                  value: _get("darkMode") ?? false,
-                  onChanged: (bool value) => _set('darkMode', value),
+                  value: _settings.get("darkMode") ?? false,
+                  onChanged: (bool value) => _settings.set('darkMode', value),
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (_get("authToken") == "") return;
+                ListTile(
+                  title: Text("Further Actions"),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    spacing: 8,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () async {
+                          final prefs = await SharedPreferences.getInstance();
+                          prefs.clear();
+                          await DefaultCacheManager().emptyCache();
 
-                    _api.logout(_get("authToken"));
-                    _set("authToken", "");
+                          if (!context.mounted) return;
 
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text('Token deleted!')));
-                  },
-                  child: Text("Reset Token"),
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Cleared Caches!')),
+                          );
+                        },
+                        child: Text("Clear Caches"),
+                      ),
+                      FilledButton(
+                        onPressed: () {
+                          if (_settings.get("authToken") == "") return;
+
+                          _api.logout(_settings.get("authToken"));
+                          _settings.set("authToken", "");
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Token deleted!')),
+                          );
+                        },
+                        child: Text("Reset Token"),
+                      ),
+                    ],
+                  ),
+                ),
+
+                AboutListTile(
+                  applicationVersion: "Version 1.2",
+                  applicationIcon: Icon(Icons.abc),
+                  applicationLegalese: """
+Copyright (C) 2025  The NTU Library Companion Authors
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.""",
                 ),
               ],
             ),
@@ -129,7 +167,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     setState(() {
       AuthService.authFailed = false;
-      _set("credentials", data);
+      _settings.set("credentials", data);
     });
   }
 
@@ -160,10 +198,10 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _refreshAccountHolder() async {
-    if (_get('accountHolder') is Account) return;
+    if (_settings.get('accountHolder') is Account) return;
 
-    final authToken = _get("authToken") ?? "";
-    final studentId = _get("credentials")?["user"] ?? "";
+    final authToken = _settings.get("authToken") ?? "";
+    final studentId = _settings.get("credentials")?["user"] ?? "";
 
     if (authToken == "" || studentId == "") return;
 
@@ -172,6 +210,6 @@ class _SettingsPageState extends State<SettingsPage> {
       authToken: authToken,
     );
 
-    _set("accountHolder", student);
+    _settings.set("accountHolder", student);
   }
 }

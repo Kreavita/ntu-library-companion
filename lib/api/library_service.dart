@@ -13,6 +13,7 @@ import 'package:ntu_library_companion/model/conference_room.dart';
 import 'package:ntu_library_companion/model/room.dart';
 import 'package:ntu_library_companion/model/student.dart';
 import 'package:ntu_library_companion/util.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LibraryService {
   Future<ApiResult> get({
@@ -32,6 +33,41 @@ class LibraryService {
               ? await printStreamedResp(resp)
               : await resp.stream.bytesToString(),
       statusCode: resp.statusCode,
+    );
+  }
+
+  Future<ApiResult> _cachedRequest(
+    String cacheKey,
+    Future<ApiResult> Function() request,
+  ) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    DateTime lastValidCache = DateTime.parse(
+      prefs.getString("api_${cacheKey}_date") ?? "19700101",
+    );
+
+    int statusCode = 200;
+
+    if (lastValidCache.isBefore(DateTime.now().add(Duration(days: -7)))) {
+      final result = await request();
+      if (result.statusCode == 200) {
+        prefs.setString("api_${cacheKey}_date", DateTime.now().toString());
+        prefs.setString("api_$cacheKey", result.body);
+      }
+      return result;
+    } else if (lastValidCache.isBefore(
+      DateTime.now().add(Duration(days: -1)),
+    )) {
+      request().then((result) {
+        if (result.statusCode != 200) return;
+
+        prefs.setString("api_${cacheKey}_date", DateTime.now().toString());
+        prefs.setString("api_$cacheKey", result.body);
+      });
+    }
+
+    return ApiResult(
+      body: prefs.getString("api_$cacheKey")!,
+      statusCode: statusCode,
     );
   }
 
@@ -114,13 +150,16 @@ class LibraryService {
   Future<Map<String, Category>> getCategories(String authToken) async {
     final Map<String, Category> cates = {};
 
-    final ApiResult res = await get(
-      endpoint: Endpoint.categoryPager,
-      headers: {"authToken": authToken},
-      params: {
-        'queryString': '{"status":"Y"}',
-        'pagerString': '{"pageSize":-1}',
-      },
+    final ApiResult res = await _cachedRequest(
+      "categories",
+      () => get(
+        endpoint: Endpoint.categoryPager,
+        headers: {"authToken": authToken},
+        params: {
+          'queryString': '{"status":"Y"}',
+          'pagerString': '{"pageSize":-1}',
+        },
+      ),
     );
 
     if (res.statusCode != 200) {
@@ -269,14 +308,17 @@ class LibraryService {
     String authToken,
     Category cate,
   ) async {
-    final ApiResult res = await get(
-      endpoint: Endpoint.conferenceRoomsPager,
-      params: {
-        'queryString': '{"status":"Y","searchableFlag":"Y"}',
-        'pagerString': '{"pageSize":-1}',
-        'miscQueryString': '{"branchId": "${cate.branch.bid}"}',
-      },
-      headers: {"authToken": authToken},
+    final ApiResult res = await _cachedRequest(
+      "confRooms",
+      () => get(
+        endpoint: Endpoint.conferenceRoomsPager,
+        params: {
+          'queryString': '{"status":"Y","searchableFlag":"Y"}',
+          'pagerString': '{"pageSize":-1}',
+          'miscQueryString': '{"branchId": "${cate.branch.bid}"}',
+        },
+        headers: {"authToken": authToken},
+      ),
     );
 
     if (res.statusCode != 200) return [];
@@ -286,5 +328,63 @@ class LibraryService {
     return (jsonObj["resultList"] as List)
         .map((json) => ConferenceRoom.fromJson(json))
         .toList();
+  }
+
+  Future<List<Booking>> getRoomOccupancy(
+    String authToken,
+    ConferenceRoom room,
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    final ApiResult res = await get(
+      endpoint: Endpoint.bookingsPager,
+      params: {
+        'queryString': '{"mainResourceId":"${room.rid}"}',
+        'pagerString': '{"pageSize":-1}',
+        'miscQueryString':
+            '{"bookingStartDate":"${DateFormat("yyyy-MM-dd").format(startDate)}T00:00:00.000Z","bookingEndDate":"${DateFormat("yyyy-MM-dd").format(endDate)}T00:00:00.000Z"}',
+      },
+      headers: {"authToken": authToken},
+    );
+
+    if (res.statusCode != 200) return [];
+
+    final jsonObj = res.asJson<Map>(fallback: {"resultList": []});
+
+    return (jsonObj["resultList"] as List)
+        .map((json) => Booking.fromJson(bookingsJson: json))
+        .toList();
+  }
+
+  // TODO: generalize for all Categories
+  Future<Map<ConferenceRoom, List<Booking>>> getConfRoomBookings(
+    String authToken,
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    final Map<String, Category> cates = await getCategories(authToken);
+    final Category? discRoomMain = cates["0cf0f3a271ba92820171ba92f43f0000"];
+
+    if (discRoomMain == null) {
+      return {};
+    }
+
+    final List<ConferenceRoom> confRooms = await getConferenceRooms(
+      authToken,
+      discRoomMain,
+    );
+
+    final Map<ConferenceRoom, List<Booking>> confRoomBookings = {};
+    // get bookings for all rooms
+    for (final room in confRooms) {
+      confRoomBookings[room] = await getRoomOccupancy(
+        authToken,
+        room,
+        startDate,
+        endDate,
+      );
+    }
+
+    return confRoomBookings;
   }
 }
