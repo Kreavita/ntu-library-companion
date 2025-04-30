@@ -120,19 +120,30 @@ class _BookingHistoryState extends State<BookingHistory>
                     return Column(
                       children: [
                         ListTile(
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            mainAxisSize: MainAxisSize.max,
-                            children: [
-                              Icon(bStatus.icon, color: bStatus.color),
-                              Text(
-                                bStatus.message,
-                                style: TextStyle(
+                          visualDensity: VisualDensity(vertical: 2),
+                          trailing: SizedBox(
+                            width: 64,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.max,
+                              children: [
+                                Icon(
+                                  bStatus.icon,
                                   color: bStatus.color,
-                                  fontWeight: FontWeight.w600,
+                                  size: 32,
                                 ),
-                              ),
-                            ],
+                                Flexible(
+                                  child: Text(
+                                    bStatus.message,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: bStatus.color,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                           title: Padding(
                             padding: const EdgeInsets.only(bottom: 8.0),
