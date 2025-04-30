@@ -221,9 +221,9 @@ class _BookingHistoryState extends State<BookingHistory>
       _settings!.get('accountHolder') as Student,
     );
 
-    _tabController = TabController(length: _bookingStats.length, vsync: this);
-
     if (mounted) {
+      _tabController = TabController(length: _bookingStats.length, vsync: this);
+
       setState(() {
         _complete = true;
       });
