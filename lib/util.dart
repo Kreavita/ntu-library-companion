@@ -42,6 +42,12 @@ extension RoundedDateTime on DateTime {
   }
 }
 
+extension Comparison on DateTime {
+  bool isWithin(DateTime start, DateTime end) {
+    return end.isAfter(this) && !isBefore(start);
+  }
+}
+
 typedef TimeTable = Map<String, List<TimeOfDay>>;
 
 final List<String> timetableDays = [

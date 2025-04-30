@@ -12,6 +12,7 @@ import 'package:ntu_library_companion/model/conference_room.dart';
 import 'package:ntu_library_companion/model/room.dart';
 import 'package:ntu_library_companion/model/settings_provider.dart';
 import 'package:ntu_library_companion/model/student.dart';
+import 'package:ntu_library_companion/screens/reservation/conf_room_timetable.dart';
 import 'package:ntu_library_companion/screens/reservation/participant_picker.dart';
 import 'package:ntu_library_companion/screens/reservation/room_picker.dart';
 import 'package:ntu_library_companion/util.dart';
@@ -64,6 +65,8 @@ class _ReservationFormState extends State<ReservationForm> {
 
   bool _submitting = false;
 
+  Future<Map<ConferenceRoom, List<Booking>>>? _bookings;
+
   Future<void> _getConfRooms() async {
     if (_conferenceRooms.isNotEmpty) return;
     _authToken ??= await _auth.getToken();
@@ -72,6 +75,16 @@ class _ReservationFormState extends State<ReservationForm> {
     _conferenceRooms = await _library.getConferenceRooms(
       _authToken!,
       widget.cate,
+    );
+
+    _updateBookings();
+  }
+
+  _updateBookings() {
+    _bookings = _library.getConfRoomBookings(
+      _authToken ?? "",
+      _date,
+      _date.add(Duration(days: 1)),
     );
   }
 
@@ -275,16 +288,38 @@ class _ReservationFormState extends State<ReservationForm> {
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 16.0),
-                      child: Text(
-                        "Select Room:",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      child: Row(
+                        spacing: 8,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "Select Room:",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          if (widget.cate.type == "CRM")
+                            ElevatedButton(
+                              onPressed: () async {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => ConfRoomTimetable(
+                                          date: _date,
+                                          ttEntry: ttEntry,
+                                          bookings: _bookings!,
+                                        ),
+                                  ),
+                                );
+                              },
+                              child: Text("Timetable"),
+                            ),
+                        ],
                       ),
                     ),
                     RoomPicker(
-                      authToken: _settings.get("authToken") ?? "",
+                      authToken: _authToken ?? "",
                       cate: widget.cate,
                       date: _date,
                       startTime: _start,
@@ -375,6 +410,7 @@ class _ReservationFormState extends State<ReservationForm> {
 
     setState(() {
       _date = picked;
+      _updateBookings();
     });
   }
 
@@ -468,7 +504,7 @@ class _ReservationFormState extends State<ReservationForm> {
   }
 
   void _submitReservation() async {
-    if (_submitting) return;
+    if (_submitting || _authToken == null) return;
 
     if (!_validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -486,14 +522,7 @@ class _ReservationFormState extends State<ReservationForm> {
 
     _submitting = true;
 
-    final authToken = await _auth.getToken();
-
-    if (authToken == null) {
-      _submitting = false;
-      return;
-    }
-
-    final Account? user = await _library.getMyProfile(authToken);
+    final Account? user = await _library.getMyProfile(_authToken!);
 
     if (user == null) {
       _submitting = false;
@@ -510,7 +539,7 @@ class _ReservationFormState extends State<ReservationForm> {
       _end,
       _date,
       participants,
-      authToken,
+      _authToken!,
     );
 
     if (resp.statusCode == 401) {
