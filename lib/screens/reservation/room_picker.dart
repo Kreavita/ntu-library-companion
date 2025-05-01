@@ -59,12 +59,14 @@ class _RoomPickerState extends State<RoomPicker> {
       child:
           (!_fetchComplete)
               ? Center(child: CircularProgressIndicator.adaptive())
-              : (_rooms.isEmpty || !widget.validSelection)
+              : (_rooms.isEmpty ||
+                  !widget.validSelection ||
+                  widget.authToken == "")
               ? Padding(
                 padding: const EdgeInsets.all(32.0),
                 child: Center(
                   child:
-                      (widget.validSelection)
+                      (widget.validSelection && widget.authToken != "")
                           ? InfoRow(
                             icon: Icons.no_meeting_room_outlined,
                             child: Text(
@@ -74,7 +76,7 @@ class _RoomPickerState extends State<RoomPicker> {
                           : InfoRow(
                             icon: Icons.info_outline,
                             child: Text(
-                              "Rooms will be searched when you have set a valid timespan",
+                              "Rooms will be searched when you have set a valid timespan and are logged in.",
                             ),
                           ),
                 ),

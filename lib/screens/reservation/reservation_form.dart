@@ -69,8 +69,12 @@ class _ReservationFormState extends State<ReservationForm> {
 
   Future<void> _getConfRooms() async {
     if (_conferenceRooms.isNotEmpty) return;
-    _authToken ??= await _auth.getToken();
-    if (_authToken == null) return;
+    final token = await _auth.getToken();
+    if (token == null) return;
+
+    setState(() {
+      _authToken ??= token;
+    });
 
     _conferenceRooms = await _library.getConferenceRooms(
       _authToken!,
