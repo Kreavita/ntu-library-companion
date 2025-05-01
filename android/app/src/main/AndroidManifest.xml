@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <uses-permission android:name="android.permission.FINGERPRINT"/>
     <application
-        android:label="ntu_library_companion"
+        android:label="NTU Library Companion"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
