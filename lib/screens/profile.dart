@@ -38,12 +38,19 @@ class _ProfilePageState extends State<ProfilePage>
   final Map<String, Booking> _contactStates = {};
   Booking? _booking;
 
-  bool _firstRun = true;
+  Timer? _timer;
 
   @override
   initState() {
     super.initState();
     _streamSubscription = widget.fabNotifier.listen(handleFabEvent);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _streamSubscription?.cancel();
+    super.dispose();
   }
 
   @override
@@ -126,12 +133,13 @@ class _ProfilePageState extends State<ProfilePage>
     });
   }
 
-  void _updateBookingInfos() async {
-    _firstRun = false;
+  void _updateBookingInfos({bool shadowUpdate = false}) async {
     if (!_updateBookingsComplete) return;
 
     setState(() {
-      _booking = null;
+      if (!shadowUpdate) {
+        _booking = null;
+      }
       _updateBookingsComplete = false;
     });
 
@@ -213,13 +221,19 @@ class _ProfilePageState extends State<ProfilePage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+
     _settings ??= Provider.of<SettingsProvider>(context);
     _auth ??= AuthService(settings: _settings!);
 
+    if (_timer == null) {
+      _timer = Timer.periodic(Duration(minutes: 7), (Timer timer) {
+        _updateBookingInfos(shadowUpdate: true);
+      });
+      _updateBookingInfos();
+    }
+
     final Map<String, Student> contacts = _settings!.get("contacts") ?? {};
     final keys = contacts.keys.toList();
-
-    if (_firstRun) _updateBookingInfos();
 
     return CenterContent(
       child: Column(
