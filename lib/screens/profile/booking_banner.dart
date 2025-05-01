@@ -136,14 +136,10 @@ class ReservationBanner extends StatelessWidget {
               child: Wrap(
                 spacing: 5.0,
                 children:
-                    (booking.bookingParticipants + [booking.host]).map((bp) {
+                    booking.bookingParticipants.map((bp) {
                       return Chip(
                         avatar: Icon(Icons.account_circle_outlined),
                         label: Text(bp.name),
-                        backgroundColor:
-                            (bp.runtimeType == Account)
-                                ? Theme.of(context).primaryColor
-                                : null,
                       );
                     }).toList(),
               ),
