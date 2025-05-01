@@ -93,8 +93,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 ListTile(
                   title: Text("Further Actions"),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  subtitle: Wrap(
+                    alignment: WrapAlignment.end,
                     spacing: 8,
                     children: [
                       ElevatedButton(
