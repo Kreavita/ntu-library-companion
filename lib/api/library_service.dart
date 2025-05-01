@@ -171,33 +171,7 @@ class LibraryService {
     );
 
     for (final cate in jsonObj["resultList"] as List) {
-      try {
-        final ApiResult availRes = await get(
-          endpoint: Endpoint.catAvail,
-          params: {"cateId": cate["cateId"]},
-          headers: {"authToken": authToken},
-        );
-        final ApiResult totalRes = await get(
-          endpoint: Endpoint.catTotal,
-          params: {"miscQueryString": '{"cateId":"${cate["cateId"]}"}'},
-          headers: {"authToken": authToken},
-        );
-
-        final availJson = availRes.asJson<Map<String, dynamic>>(
-          fallback: {"count": 0},
-        );
-        final totalJson = totalRes.asJson<Map<String, dynamic>>(
-          fallback: {"count": 0},
-        );
-
-        cates[cate["cateId"]] = Category.fromJson(
-          cate,
-          availJson["count"] ?? 0,
-          totalJson["count"] ?? 0,
-        );
-      } catch (e) {
-        print(e);
-      }
+      cates[cate["cateId"]] = Category.fromJson(cate);
     }
     return cates;
   }

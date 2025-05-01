@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:ntu_library_companion/api/auth_service.dart';
+import 'package:ntu_library_companion/api/base_api.dart';
 import 'package:ntu_library_companion/api/library_service.dart';
+import 'package:ntu_library_companion/model/api_result.dart';
 import 'package:ntu_library_companion/model/auth_result.dart';
 import 'package:ntu_library_companion/model/category.dart';
 import 'package:ntu_library_companion/model/settings_provider.dart';
@@ -36,6 +38,7 @@ class CategoriesPageState extends State<CategoriesPage>
 
   bool _loading = false;
   final Map<String, Category> _cates = {};
+  final Map<String, Future<List<int>?>> _cateStats = {};
 
   @override
   didUpdateWidget(CategoriesPage oldWidget) {
@@ -98,9 +101,15 @@ class CategoriesPageState extends State<CategoriesPage>
       Category.zh2engName[cat.name] = cat.engName;
     });
 
+    final cateStats = cates.map(
+      (cateId, _) => MapEntry(cateId, _fetchStats(cateId, authToken)),
+    );
+
     setState(() {
       _cates.clear();
       _cates.addAll(cates);
+      _cateStats.clear();
+      _cateStats.addAll(cateStats);
       if (cates.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -150,6 +159,7 @@ class CategoriesPageState extends State<CategoriesPage>
                                 crossAxisCellCount: 1,
                                 child: CategoryCard(
                                   cat: _cates[key]!,
+                                  stats: _cateStats[key]!,
                                   tapCallback: _openCategory,
                                 ),
                               ),
@@ -164,10 +174,51 @@ class CategoriesPageState extends State<CategoriesPage>
     );
   }
 
+  Future<List<int>?> _fetchStats(String cateId, String authToken) async {
+    int avail = -1;
+    int total = -1;
+
+    for (var retries = 0; retries < 10; retries++) {
+      final ApiResult availRes = await _library.get(
+        endpoint: Endpoint.catAvail,
+        params: {"cateId": cateId},
+        headers: {"authToken": authToken},
+      );
+      avail =
+          availRes.asJson<Map<String, dynamic>>(
+            fallback: {"count": -1},
+          )["count"] ??
+          -1;
+      if (avail != -1) break;
+      await Future.delayed(Duration(milliseconds: 250));
+    }
+
+    for (var retries = 0; retries < 10; retries++) {
+      final ApiResult totalRes = await _library.get(
+        endpoint: Endpoint.catTotal,
+        params: {"miscQueryString": '{"cateId":"$cateId"}'},
+        headers: {"authToken": authToken},
+      );
+      total =
+          totalRes.asJson<Map<String, dynamic>>(
+            fallback: {"count": -1},
+          )["count"] ??
+          -1;
+      if (total != -1) break;
+      await Future.delayed(Duration(milliseconds: 250));
+    }
+
+    return [avail, total];
+  }
+
   _openCategory(String cateId) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => CategoryDetails(cate: _cates[cateId]!),
+        builder:
+            (context) => CategoryDetails(
+              cate: _cates[cateId]!,
+              cateStats: _cateStats[cateId]!,
+            ),
       ),
     );
   }

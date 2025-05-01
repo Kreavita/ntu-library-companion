@@ -10,8 +10,6 @@ class Category {
   final String description;
   final String attachmentId;
   final Branch branch;
-  final int available;
-  final int capacity;
   final String bookingEngDesc;
   final Map<String, dynamic> bookingPolicy;
   final Map<String, dynamic> openPolicy;
@@ -27,18 +25,12 @@ class Category {
     required this.description,
     required this.attachmentId,
     required this.branch,
-    required this.available,
-    required this.capacity,
     required this.bookingEngDesc,
     required this.bookingPolicy,
     required this.openPolicy,
   });
 
-  factory Category.fromJson(
-    Map<String, dynamic> jsonObj,
-    int avail,
-    int count,
-  ) {
+  factory Category.fromJson(Map<String, dynamic> jsonObj) {
     List<dynamic> attachments = jsonObj["resourceCateAttachs"];
     return Category(
       catId: jsonObj['cateId'] as String,
@@ -48,8 +40,6 @@ class Category {
       description: cleanHtml(jsonObj['description'] ?? "No Description"),
       attachmentId: attachments.firstOrNull?["aid"] ?? "",
       branch: Branch.fromJson(jsonObj["branch"]),
-      available: avail,
-      capacity: count,
       bookingEngDesc: cleanHtml(
         jsonObj['bookingEngDesc'] ?? "No Booking information",
       ),

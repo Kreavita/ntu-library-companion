@@ -7,8 +7,13 @@ import 'package:ntu_library_companion/widgets/timetable.dart';
 
 class CategoryDetails extends StatefulWidget {
   final Category cate;
+  final Future<List<int>?> cateStats;
 
-  const CategoryDetails({super.key, required this.cate});
+  const CategoryDetails({
+    super.key,
+    required this.cate,
+    required this.cateStats,
+  });
 
   @override
   State<CategoryDetails> createState() => _CategoryDetailsState();
@@ -213,10 +218,21 @@ class _CategoryDetailsState extends State<CategoryDetails>
                   style: FilledButton.styleFrom(
                     padding: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                   ),
-                  child: Text(
-                    'Reserve (${cate.available}/${cate.capacity})',
-                    style: TextStyle(fontSize: 16),
-                    textAlign: TextAlign.center,
+                  child: FutureBuilder(
+                    future: widget.cateStats,
+                    builder: (context, snapshot) {
+                      int available = 0;
+                      int capacity = 0;
+                      if (snapshot.hasData) {
+                        available = snapshot.data![0];
+                        capacity = snapshot.data![1];
+                      }
+                      return Text(
+                        'Reserve ($available/$capacity)',
+                        style: TextStyle(fontSize: 16),
+                        textAlign: TextAlign.center,
+                      );
+                    },
                   ),
                 ),
               ),
