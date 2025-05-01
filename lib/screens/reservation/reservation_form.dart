@@ -65,7 +65,7 @@ class _ReservationFormState extends State<ReservationForm> {
 
   bool _submitting = false;
 
-  Future<Map<ConferenceRoom, List<Booking>>>? _bookings;
+  Future<Map<ConferenceRoom, List<Booking>>>? _bookings = Future(() => {});
 
   Future<void> _getConfRooms() async {
     if (_conferenceRooms.isNotEmpty) return;

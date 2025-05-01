@@ -42,13 +42,25 @@ class ConfRoomTimetable extends StatelessWidget {
                           "The following table highlights all reserved timeslots. The red line marks the current time.",
                         ),
                       ),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: _buildTimetable(context, snapshot.data!),
-                        ),
-                      ),
+                      (snapshot.data?.isEmpty ?? true)
+                          ? Center(
+                            child: InfoRow(
+                              icon: Icons.no_sim_outlined,
+                              child: Text(
+                                "No Booking Information Available",
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                              ),
+                            ),
+                          )
+                          : SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: _buildTimetable(context, snapshot.data!),
+                            ),
+                          ),
                     ],
                   ),
                 ),
