@@ -20,11 +20,7 @@ class ConfRoomTimetable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          "Conference Rooms on ${DateFormat("EEE,").format(date)} ${DateFormat("MMM d").format(date)}",
-        ),
-      ),
+      appBar: AppBar(title: Text("Timetable")),
       body: Center(
         child: FutureBuilder(
           future: bookings,
@@ -36,10 +32,21 @@ class ConfRoomTimetable extends StatelessWidget {
                   child: Column(
                     spacing: 8,
                     children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: Text(
+                          "Conference Rooms on ${DateFormat("EEE,").format(date)} ${DateFormat("MMM d").format(date)}",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                       InfoRow(
                         icon: Icons.info_outline,
                         child: Text(
-                          "The following table highlights all reserved timeslots. The red line marks the current time.",
+                          "The following table shows free, used and reserved timeslots of all Conference Rooms on ${DateFormat("EEEE,").format(date)} ${DateFormat("MMM d y").format(date)}.\nThe red line marks the current time.",
                         ),
                       ),
                       (snapshot.data?.isEmpty ?? true)
