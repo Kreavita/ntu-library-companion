@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:ntu_library_companion/model/account.dart';
 import 'package:ntu_library_companion/model/booking.dart';
 import 'package:ntu_library_companion/model/category.dart';
 import 'package:ntu_library_companion/screens/profile/booking_history.dart';

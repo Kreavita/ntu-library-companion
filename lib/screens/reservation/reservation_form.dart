@@ -583,8 +583,7 @@ class _ReservationFormState extends State<ReservationForm> {
     if (ttEntry.length < 2) {
       return false;
     }
-    return (dt.isAfter(ttEntry[0]) || dt.isAtSameTimeAs(ttEntry[0])) &&
-        (dt.isBefore(ttEntry[1]) || dt.isAtSameTimeAs(ttEntry[1]));
+    return !dt.isBefore(ttEntry[0]) && !dt.isAfter(ttEntry[1]);
   }
 
   bool _notInThePast() {
