@@ -115,6 +115,9 @@ class _ProfilePageState extends State<ProfilePage>
     final token = await _auth!.getToken();
 
     if (token == null) {
+      setState(() {
+        _fetchCompleted = true;
+      });
       return;
     }
 
