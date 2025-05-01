@@ -130,7 +130,16 @@ class _SettingsPageState extends State<SettingsPage> {
 
                 AboutListTile(
                   applicationVersion: "Version 1.2",
-                  applicationIcon: Icon(Icons.abc),
+                  applicationIcon: ClipRRect(
+                    borderRadius: BorderRadius.circular(
+                      16.0,
+                    ), // Set the radius for rounded corners
+                    child: Image.asset(
+                      'assets/images/icon.jpg',
+                      width: 96,
+                      height: 96,
+                    ),
+                  ),
                   applicationLegalese: """
 Copyright (C) 2025  The NTU Library Companion Authors
 

@@ -12,6 +12,19 @@ class WelcomeScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(
+                16.0,
+              ), // Set the radius for rounded corners
+              child: Image.asset(
+                'assets/images/icon.jpg',
+                width: 128,
+                height: 128,
+              ),
+            ),
+          ),
+          Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Text(
               "Welcome to the NTU Library Companion App!",
