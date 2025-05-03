@@ -152,7 +152,12 @@ class _ProfilePageState extends State<ProfilePage>
       return;
     }
 
-    if (!shadowUpdate) setState(() {});
+    if (!shadowUpdate) {
+      setState(() {
+        _historyBooking = null;
+        _confRoomBooking = null;
+      });
+    }
 
     () async {
       final bookings = await _api.getBookings(token);
