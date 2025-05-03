@@ -455,5 +455,5 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   @override
-  bool get wantKeepAlive => true;
+  bool get wantKeepAlive => false;
 }

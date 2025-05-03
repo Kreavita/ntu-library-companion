@@ -129,7 +129,7 @@ class CategoriesPageState extends State<CategoriesPage>
     if (_settings.get("credentials") != null &&
         _cates.isEmpty &&
         !AuthService.authFailed) {
-      _refreshIndicatorKey.currentState?.show();
+      _refreshIndicatorKey.currentState?.show() ?? fetchCatesWrapper();
     }
 
     return RefreshIndicator(
@@ -224,5 +224,5 @@ class CategoriesPageState extends State<CategoriesPage>
   }
 
   @override
-  bool get wantKeepAlive => true;
+  bool get wantKeepAlive => false;
 }
