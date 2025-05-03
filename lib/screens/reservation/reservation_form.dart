@@ -306,7 +306,7 @@ class _ReservationFormState extends State<ReservationForm> {
                           if (widget.cate.type == "CRM")
                             ElevatedButton(
                               onPressed: () async {
-                                Navigator.of(context).push(
+                                await Navigator.of(context).push(
                                   MaterialPageRoute(
                                     builder:
                                         (context) => ConfRoomTimetable(
@@ -316,6 +316,7 @@ class _ReservationFormState extends State<ReservationForm> {
                                         ),
                                   ),
                                 );
+                                _updateBookings();
                               },
                               child: Text("Timetable"),
                             ),

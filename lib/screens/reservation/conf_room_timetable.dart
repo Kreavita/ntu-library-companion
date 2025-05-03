@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:ntu_library_companion/model/booking.dart';
 import 'package:ntu_library_companion/model/conference_room.dart';
 import 'package:ntu_library_companion/util.dart';
+import 'package:ntu_library_companion/widgets/centered_content.dart';
 import 'package:ntu_library_companion/widgets/info_row.dart';
 
 class ConfRoomTimetable extends StatelessWidget {
@@ -21,55 +22,61 @@ class ConfRoomTimetable extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text("Timetable")),
-      body: Center(
+      body: CenterContent(
         child: FutureBuilder(
           future: bookings,
           builder: (context, snapshot) {
             if (snapshot.hasData) {
+              snapshot.data?.removeWhere((_, bookings) {
+                bookings.removeWhere(
+                  (booking) =>
+                      booking.bookingEndDate.day != date.day ||
+                      booking.bookingEndDate.month != date.month ||
+                      booking.bookingEndDate.year != date.year,
+                );
+                return bookings.isEmpty;
+              });
               return SingleChildScrollView(
-                child: Container(
-                  constraints: BoxConstraints(maxWidth: 600),
-                  child: Column(
-                    spacing: 8,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                        child: Text(
-                          "Conference Rooms on ${DateFormat("EEE,").format(date)} ${DateFormat("MMM d").format(date)}",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
+                child: Column(
+                  spacing: 8,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Text(
+                        "Conference Rooms on ${DateFormat("EEE,").format(date)} ${DateFormat("MMM d").format(date)}",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      InfoRow(
-                        icon: Icons.info_outline,
-                        child: Text(
-                          "The following table shows free, used and reserved timeslots of all Conference Rooms on ${DateFormat("EEEE,").format(date)} ${DateFormat("MMM d y").format(date)}.\nThe red line marks the current time.",
-                        ),
+                    ),
+                    InfoRow(
+                      icon: Icons.info_outline,
+                      child: Text(
+                        "The following table shows free, used and reserved timeslots of all Conference Rooms on ${DateFormat("EEEE,").format(date)} ${DateFormat("MMM d y").format(date)}.\nThe red line marks the current time.",
                       ),
-                      (snapshot.data?.isEmpty ?? true)
-                          ? Center(
-                            child: InfoRow(
-                              icon: Icons.no_sim_outlined,
-                              child: Text(
-                                "No Booking Information Available",
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.error,
-                                ),
+                    ),
+                    (snapshot.data?.isEmpty ?? true)
+                        ? Center(
+                          child: InfoRow(
+                            icon: Icons.no_sim_outlined,
+                            child: Text(
+                              "No Booking Information Available",
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
                               ),
                             ),
-                          )
-                          : SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: _buildTimetable(context, snapshot.data!),
-                            ),
                           ),
-                    ],
-                  ),
+                        )
+                        : SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: _buildTimetable(context, snapshot.data!),
+                          ),
+                        ),
+                  ],
                 ),
               );
             } else if (snapshot.hasError) {
