@@ -13,6 +13,7 @@ import 'package:ntu_library_companion/screens/profile/add_user_form.dart';
 import 'package:ntu_library_companion/screens/profile/booking_banner.dart';
 import 'package:ntu_library_companion/util.dart';
 import 'package:ntu_library_companion/widgets/centered_content.dart';
+import 'package:ntu_library_companion/widgets/centered_scroll_column.dart';
 import 'package:ntu_library_companion/widgets/confirm_dialog.dart';
 import 'package:ntu_library_companion/widgets/title_with_icon.dart';
 import 'package:provider/provider.dart';
@@ -173,8 +174,6 @@ class _ProfilePageState extends State<ProfilePage>
       final Map<String, Student> contacts = _settings?.get("contacts") ?? {};
       final String userAccount = _settings?.get("credentials")?["user"] ?? "";
 
-      if (contacts.isEmpty) return;
-
       final now = DateTime.now();
       final Map<String, Booking> newStates = {};
       Booking? newBooking;
@@ -242,6 +241,27 @@ class _ProfilePageState extends State<ProfilePage>
     });
   }
 
+  /// Return the booking info that is more relevant
+  Booking? _selectBooking() {
+    final now = DateTime.now();
+    if (_confRoomBooking == null ||
+        now.isAfter(_confRoomBooking!.bookingEndDate)) {
+      return _historyBooking;
+    }
+
+    if (_historyBooking == null ||
+        now.isAfter(_historyBooking!.bookingEndDate)) {
+      return _confRoomBooking;
+    }
+
+    final cDate = _confRoomBooking!.bookingStartDate;
+    final hDate = _historyBooking!.bookingStartDate;
+
+    return (cDate.isAfter(hDate) && now.isAfter(cDate) || cDate.isBefore(hDate))
+        ? _confRoomBooking
+        : _historyBooking;
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -258,34 +278,74 @@ class _ProfilePageState extends State<ProfilePage>
 
     final Map<String, Student> contacts = _settings!.get("contacts") ?? {};
     final keys = contacts.keys.toList();
+    keys.sort((a, b) => contacts[a]!.name.compareTo(contacts[b]!.name));
+
+    final userAccount = _settings?.get("credentials")?["user"] ?? "";
+
+    final booking = _selectBooking();
+    final bookingAction = () {
+      if (booking == null) return null;
+      if (booking.host.account.toLowerCase() != userAccount.toLowerCase()) {
+        return null;
+      }
+
+      if (booking.status == "Y") {
+        return () async {
+          if (!context.mounted) return;
+          bool cancelBooking = await showDialog(
+            context: context,
+            builder:
+                (context) => ConfirmDialog(
+                  title: "Cancel your reservation?",
+                  content: "Cancel reservation of Room ${booking.room.name}?.",
+                  confirmString: "Confirm",
+                  icon: Icons.event_busy_outlined,
+                ),
+          );
+          if (!cancelBooking) return;
+
+          final token = await _auth?.getToken();
+          if (token == null) return;
+
+          await _api.cancelBooking(booking.bid, token);
+
+          if (context.mounted) _updateBookingInfos();
+        };
+      }
+      if (["L", "U", "I"].contains(booking.status)) {
+        return () async {
+          if (!context.mounted) return;
+          bool returnRoom = await showDialog(
+            context: context,
+            builder:
+                (context) => ConfirmDialog(
+                  title: "Return your booking?",
+                  content: "Finish booking of Room ${booking.room.name}?.",
+                  confirmString: "Return",
+                  icon: Icons.exit_to_app,
+                ),
+          );
+          if (!returnRoom) return;
+
+          final token = await _auth?.getToken();
+          if (token == null) return;
+
+          await _api.returnBooking(booking.bid, token);
+
+          if (context.mounted) _updateBookingInfos();
+        };
+      }
+
+      return null;
+    }();
 
     return CenterContent(
       child: Column(
         children: [
           ReservationBanner(
             onRefresh: _updateBookingInfos,
-            booking: () {
-              // Logic to select which booking info is more relevant
-              // if there are multiple sources
-              final now = DateTime.now();
-              if (_confRoomBooking == null ||
-                  now.isAfter(_confRoomBooking!.bookingEndDate)) {
-                return _historyBooking;
-              }
-
-              if (_historyBooking == null ||
-                  now.isAfter(_historyBooking!.bookingEndDate)) {
-                return _confRoomBooking;
-              }
-
-              final cDate = _confRoomBooking!.bookingStartDate;
-              final hDate = _historyBooking!.bookingStartDate;
-
-              return (cDate.isAfter(hDate) && now.isAfter(cDate) ||
-                      cDate.isBefore(hDate))
-                  ? _confRoomBooking
-                  : _historyBooking;
-            }(),
+            booking: booking,
+            onAction: bookingAction,
             loggedIn: _settings!.get("credentials") != null,
             finishedRequest:
                 _updateBookingsComplete && _confRoomBooking != null ||
@@ -304,8 +364,7 @@ class _ProfilePageState extends State<ProfilePage>
           Expanded(
             child:
                 (keys.isEmpty)
-                    ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    ? CenterScrollColumn(
                       spacing: 8.0,
                       children: [
                         Icon(Icons.group_off_outlined, size: 36),
@@ -313,18 +372,13 @@ class _ProfilePageState extends State<ProfilePage>
                           "No Contacts added",
                           style: TextStyle(fontSize: 20),
                         ),
-                        OutlinedButton(
+                        OutlinedButton.icon(
                           onPressed: _importComplete ? _addFromHistory : null,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            spacing: 8,
-                            children: [
+                          icon:
                               _importComplete
                                   ? Icon(Icons.auto_mode_outlined)
                                   : CircularProgressIndicator.adaptive(),
-                              Flexible(child: Text("Import From History")),
-                            ],
-                          ),
+                          label: Text("Import From History"),
                         ),
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 32),

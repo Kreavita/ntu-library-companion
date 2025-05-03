@@ -3,21 +3,22 @@ import 'package:intl/intl.dart';
 import 'package:ntu_library_companion/model/booking.dart';
 import 'package:ntu_library_companion/model/category.dart';
 import 'package:ntu_library_companion/screens/profile/booking_history.dart';
+import 'package:ntu_library_companion/widgets/info_row.dart';
 
 class ReservationBanner extends StatelessWidget {
   final void Function() onRefresh;
+  final void Function()? onAction;
   final Booking? booking;
   final bool loggedIn;
   final bool finishedRequest;
-  final Widget? footer;
 
   const ReservationBanner({
     super.key,
     required this.onRefresh,
+    this.onAction,
     required this.booking,
     required this.finishedRequest,
     required this.loggedIn,
-    this.footer,
   });
 
   @override
@@ -45,15 +46,46 @@ class ReservationBanner extends StatelessWidget {
                     ? _buildBannerContent(context, booking!)
                     : ((finishedRequest)
                         ? Center(
-                          child: Text(
-                            loggedIn
-                                ? "No active reservation"
-                                : "Login required to view reservations",
-                            textAlign: TextAlign.center,
+                          child: InfoRow(
+                            icon:
+                                loggedIn
+                                    ? Icons.event_busy_outlined
+                                    : Icons.no_accounts,
+                            child: Text(
+                              loggedIn
+                                  ? "No active reservation"
+                                  : "Login required to view reservations",
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         )
                         : LinearProgressIndicator()),
-                Text("Long press to reload - Tap for booking history"),
+
+                Divider(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  spacing: 8,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        "Long press to reload – Tap for booking history",
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    if (loggedIn && onAction != null)
+                      FilledButton.icon(
+                        onPressed: onAction,
+                        icon: Icon(
+                          (booking?.status == "Y")
+                              ? Icons.event_busy_outlined
+                              : Icons.exit_to_app,
+                        ),
+                        label: Text(
+                          (booking?.status == "Y") ? "Cancel" : "Return Room",
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
