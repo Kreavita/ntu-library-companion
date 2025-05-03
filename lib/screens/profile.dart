@@ -11,6 +11,7 @@ import 'package:ntu_library_companion/model/settings_provider.dart';
 import 'package:ntu_library_companion/model/student.dart';
 import 'package:ntu_library_companion/screens/profile/add_user_form.dart';
 import 'package:ntu_library_companion/screens/profile/booking_banner.dart';
+import 'package:ntu_library_companion/util.dart';
 import 'package:ntu_library_companion/widgets/centered_content.dart';
 import 'package:ntu_library_companion/widgets/confirm_dialog.dart';
 import 'package:ntu_library_companion/widgets/title_with_icon.dart';
@@ -32,11 +33,13 @@ class _ProfilePageState extends State<ProfilePage>
   AuthService? _auth;
 
   final LibraryService _api = LibraryService();
-  bool _fetchCompleted = true;
+  bool _importComplete = true;
 
+  bool _updateHistoryComplete = true;
   bool _updateBookingsComplete = true;
   final Map<String, Booking> _contactStates = {};
-  Booking? _booking;
+  Booking? _confRoomBooking;
+  Booking? _historyBooking;
 
   Timer? _timer;
 
@@ -104,19 +107,19 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   void _addFromHistory() async {
-    if (!_fetchCompleted) return;
+    if (!_importComplete) return;
     Map<String, Student> updatedList =
         _settings!.get("contacts") ?? <String, Student>{};
 
     setState(() {
-      _fetchCompleted = false;
+      _importComplete = false;
     });
 
     final token = await _auth!.getToken();
 
     if (token == null) {
       setState(() {
-        _fetchCompleted = true;
+        _importComplete = true;
       });
       return;
     }
@@ -131,26 +134,37 @@ class _ProfilePageState extends State<ProfilePage>
     }
 
     setState(() {
-      _fetchCompleted = true;
+      _importComplete = true;
       _settings!.set("contacts", updatedList);
     });
   }
 
   void _updateBookingInfos({bool shadowUpdate = false}) async {
-    if (!_updateBookingsComplete) return;
+    if (!_updateBookingsComplete || !_updateHistoryComplete) return;
 
-    setState(() {
-      if (!shadowUpdate) {
-        _booking = null;
-      }
-      _updateBookingsComplete = false;
-    });
+    _updateBookingsComplete = false;
+    _updateHistoryComplete = false;
 
     final token = await _auth!.getToken();
+    if (token == null) {
+      _updateBookingsComplete = true;
+      _updateHistoryComplete = true;
+      return;
+    }
+
+    if (!shadowUpdate) setState(() {});
+
+    () async {
+      final bookings = await _api.getBookings(token);
+      bookings.sort((a, b) => a.bookingStartDate.compareTo(b.bookingStartDate));
+      _historyBooking = bookings.firstOrNull;
+
+      setState(() {
+        _updateHistoryComplete = true;
+      });
+    }();
 
     await () async {
-      if (token == null) return;
-
       final Map<String, Student> contacts = _settings?.get("contacts") ?? {};
       final String userAccount = _settings?.get("credentials")?["user"] ?? "";
 
@@ -158,12 +172,15 @@ class _ProfilePageState extends State<ProfilePage>
 
       final now = DateTime.now();
       final Map<String, Booking> newStates = {};
+      Booking? newBooking;
 
       Map<ConferenceRoom, List<Booking>> confRoomBookings = await _api
           .getConfRoomBookings(token, now, now.add(Duration(days: 1)));
 
       confRoomBookings.forEach((room, bookings) {
         for (final booking in bookings) {
+          if (["T", "O", "Z", "F", "C"].contains(booking.status)) continue;
+
           List<String> participantIds =
               booking.bookingParticipants.map((s) => s.uuid).toList() +
               [booking.host.uuid];
@@ -175,25 +192,35 @@ class _ProfilePageState extends State<ProfilePage>
               [booking.host.account.toLowerCase()];
 
           if (participantAccounts.contains(userAccount.toLowerCase())) {
-            _booking = booking;
-            _booking!.bookingParticipants.add(
+            if (newBooking?.bookingStartDate.isBefore(
+                  booking.bookingStartDate,
+                ) ??
+                false) {
+              continue;
+              // make sure the booking on the banner is the current or next one
+            }
+            booking.bookingParticipants.add(
               Student(
                 uuid: booking.host.uuid,
                 account: booking.host.account,
                 name: booking.host.name,
               ),
             );
-            _booking!.bookingParticipants.sort(
+            booking.bookingParticipants.sort(
               (s1, s2) => s1.name.compareTo(s2.name),
             );
+
+            newBooking = booking;
           }
 
           for (var uuid in contacts.keys) {
             if (!participantIds.contains(uuid)) continue;
-            if (booking.bookingEndDate.isBefore(DateTime.now())) continue;
-            if (booking.bookingStartDate.isAfter(DateTime.now())) continue;
-
-            newStates[uuid] = booking;
+            if (now.isWithin(
+              booking.bookingStartDate,
+              booking.bookingEndDate,
+            )) {
+              newStates[uuid] = booking;
+            }
           }
 
           if (contacts.length == newStates.length) return;
@@ -202,23 +229,12 @@ class _ProfilePageState extends State<ProfilePage>
 
       _contactStates.clear();
       _contactStates.addAll(newStates);
+      _confRoomBooking = newBooking;
     }();
 
     setState(() {
       _updateBookingsComplete = true;
     });
-
-    if (_booking == null && token != null) {
-      setState(() {
-        _updateBookingsComplete = false;
-      });
-
-      _booking = (await _api.getBookings(token)).firstOrNull;
-
-      setState(() {
-        _updateBookingsComplete = true;
-      });
-    }
   }
 
   @override
@@ -243,9 +259,33 @@ class _ProfilePageState extends State<ProfilePage>
         children: [
           ReservationBanner(
             onRefresh: _updateBookingInfos,
-            booking: _booking,
+            booking: () {
+              // Logic to select which booking info is more relevant
+              // if there are multiple sources
+              final now = DateTime.now();
+              if (_confRoomBooking == null ||
+                  now.isAfter(_confRoomBooking!.bookingEndDate)) {
+                return _historyBooking;
+              }
+
+              if (_historyBooking == null ||
+                  now.isAfter(_historyBooking!.bookingEndDate)) {
+                return _confRoomBooking;
+              }
+
+              final cDate = _confRoomBooking!.bookingStartDate;
+              final hDate = _historyBooking!.bookingStartDate;
+
+              return (cDate.isAfter(hDate) && now.isAfter(cDate) ||
+                      cDate.isBefore(hDate))
+                  ? _confRoomBooking
+                  : _historyBooking;
+            }(),
             loggedIn: _settings!.get("credentials") != null,
-            finishedRequest: _updateBookingsComplete,
+            finishedRequest:
+                _updateBookingsComplete && _confRoomBooking != null ||
+                _updateHistoryComplete && _historyBooking != null ||
+                _updateBookingsComplete && _updateHistoryComplete,
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -269,12 +309,12 @@ class _ProfilePageState extends State<ProfilePage>
                           style: TextStyle(fontSize: 20),
                         ),
                         OutlinedButton(
-                          onPressed: _fetchCompleted ? _addFromHistory : null,
+                          onPressed: _importComplete ? _addFromHistory : null,
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             spacing: 8,
                             children: [
-                              _fetchCompleted
+                              _importComplete
                                   ? Icon(Icons.auto_mode_outlined)
                                   : CircularProgressIndicator.adaptive(),
                               Flexible(child: Text("Import From History")),
