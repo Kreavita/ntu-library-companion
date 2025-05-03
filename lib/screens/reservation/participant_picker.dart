@@ -22,6 +22,7 @@ class ParticipantPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final keys = contacts.keys.toList();
+    keys.sort((a, b) => contacts[a]!.name.compareTo(contacts[b]!.name));
 
     return Column(
       children: [
