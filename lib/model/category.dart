@@ -14,9 +14,6 @@ class Category {
   final Map<String, dynamic> bookingPolicy;
   final Map<String, dynamic> openPolicy;
 
-  static Map<String, String> type2engName = {};
-  static Map<String, String> zh2engName = {};
-
   Category({
     required this.catId,
     required this.type,

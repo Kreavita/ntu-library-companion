@@ -69,6 +69,11 @@ class _MyHomePageState extends State<MyHomePage> {
       context,
       listen: false,
     );
+
+    jsonStore.getItem('cache').then((jsonObj) {
+      settings.loadCache(jsonObj: jsonObj ?? {});
+    });
+
     jsonStore.getItem('settings').then((jsonObj) {
       settings.loadJson(jsonObj: jsonObj ?? {}, jsonStore: jsonStore);
       setState(() {});

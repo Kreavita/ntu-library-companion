@@ -2,11 +2,12 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:ntu_library_companion/model/booking_stats.dart';
-import 'package:ntu_library_companion/model/category.dart';
+import 'package:ntu_library_companion/model/settings_provider.dart';
 import 'package:ntu_library_companion/widgets/info_row.dart';
 
 class BookingStatsBanner extends StatelessWidget {
   final BookingStats stats;
+
   const BookingStatsBanner({super.key, required this.stats});
 
   @override
@@ -39,7 +40,8 @@ class BookingStatsBanner extends StatelessWidget {
                       Icon(Icons.meeting_room_outlined, size: 32),
                       Flexible(
                         child: Text(
-                          Category.zh2engName[stats.cateName] ?? stats.cateName,
+                          SettingsProvider.zh2engName[stats.cateName] ??
+                              stats.cateName,
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w500,

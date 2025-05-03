@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:ntu_library_companion/model/booking.dart';
-import 'package:ntu_library_companion/model/category.dart';
+import 'package:ntu_library_companion/model/settings_provider.dart';
 import 'package:ntu_library_companion/screens/profile/booking_history.dart';
 import 'package:ntu_library_companion/widgets/info_row.dart';
 
@@ -116,7 +116,7 @@ class ReservationBanner extends StatelessWidget {
               //Icon(Icons.meeting_room_outlined, size: 32),
               Flexible(
                 child: Text(
-                  "Booked: ${Category.type2engName[booking.room.type] ?? "Room"} ${booking.room.name}",
+                  "Booked: ${SettingsProvider.type2engName[booking.room.type] ?? "Room"} ${booking.room.name}",
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
                 ),
               ),

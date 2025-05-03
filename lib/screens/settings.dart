@@ -102,6 +102,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           final prefs = await SharedPreferences.getInstance();
                           prefs.clear();
                           await DefaultCacheManager().emptyCache();
+                          _settings.clearCache();
 
                           if (!context.mounted) return;
 

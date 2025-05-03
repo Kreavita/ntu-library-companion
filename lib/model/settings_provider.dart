@@ -53,4 +53,23 @@ class SettingsProvider with ChangeNotifier {
     _jsonStore = jsonStore;
     notifyListeners();
   }
+
+  static final Map<String, dynamic> _cache = {};
+  static get zh2engName => _cache["zh2engName"] ?? {};
+  static get type2engName => _cache["type2engName"] ?? {};
+
+  dynamic updateCache(String key, dynamic data) {
+    _cache[key] = data;
+    _jsonStore?.setItem("cache", _cache);
+    notifyListeners();
+  }
+
+  void clearCache() {
+    _cache.clear();
+    _jsonStore?.setItem("cache", {});
+    notifyListeners();
+  }
+
+  void loadCache({required Map<String, dynamic> jsonObj}) =>
+      _cache.addAll(jsonObj);
 }

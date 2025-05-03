@@ -96,10 +96,15 @@ class CategoriesPageState extends State<CategoriesPage>
     if (authToken == null) return;
 
     final cates = await _library.getCategories(authToken);
+    final type2engName = {};
+    final zh2engName = {};
     cates.forEach((_, cat) {
-      Category.type2engName[cat.type] = cat.engName;
-      Category.zh2engName[cat.name] = cat.engName;
+      type2engName[cat.type] = cat.engName;
+      zh2engName[cat.name] = cat.engName;
     });
+
+    _settings.updateCache("type2engName", type2engName);
+    _settings.updateCache("zh2engName", zh2engName);
 
     final cateStats = cates.map(
       (cateId, _) => MapEntry(cateId, _fetchStats(cateId, authToken)),

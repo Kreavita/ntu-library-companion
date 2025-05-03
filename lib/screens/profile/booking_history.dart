@@ -5,7 +5,6 @@ import 'package:ntu_library_companion/api/auth_service.dart';
 import 'package:ntu_library_companion/api/library_service.dart';
 import 'package:ntu_library_companion/model/booking.dart';
 import 'package:ntu_library_companion/model/booking_stats.dart';
-import 'package:ntu_library_companion/model/category.dart';
 import 'package:ntu_library_companion/model/settings_provider.dart';
 import 'package:ntu_library_companion/model/student.dart';
 import 'package:ntu_library_companion/screens/profile/booking_stats_banner.dart';
@@ -155,7 +154,7 @@ class _BookingHistoryState extends State<BookingHistory>
                                 ),
                                 Expanded(
                                   child: Text(
-                                    "${Category.type2engName[b.room.type]} ${b.room.name}",
+                                    "${SettingsProvider.type2engName[b.room.type]} ${b.room.name}",
                                   ),
                                 ),
                               ],
