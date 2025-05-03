@@ -15,6 +15,7 @@ import 'package:ntu_library_companion/util.dart';
 import 'package:ntu_library_companion/widgets/centered_content.dart';
 import 'package:ntu_library_companion/widgets/centered_scroll_column.dart';
 import 'package:ntu_library_companion/widgets/confirm_dialog.dart';
+import 'package:ntu_library_companion/widgets/easy_refresh_indicator.dart';
 import 'package:ntu_library_companion/widgets/title_with_icon.dart';
 import 'package:provider/provider.dart';
 
@@ -140,7 +141,7 @@ class _ProfilePageState extends State<ProfilePage>
     });
   }
 
-  void _updateBookingInfos({bool shadowUpdate = false}) async {
+  Future<void> _updateBookingInfos({bool shadowUpdate = false}) async {
     if (!_updateBookingsComplete || !_updateHistoryComplete) return;
 
     _updateBookingsComplete = false;
@@ -262,6 +263,67 @@ class _ProfilePageState extends State<ProfilePage>
         : _historyBooking;
   }
 
+  /// Return null or the appropriate Function to handle the `onAction`
+  /// callback of `ReservationBanner`
+  Future<void> Function()? _selectBookingAction(
+    Booking? booking,
+    String userAccount,
+  ) {
+    if (booking == null) return null;
+    if (booking.host.account.toLowerCase() != userAccount.toLowerCase()) {
+      return null;
+    }
+
+    if (booking.status == "Y") {
+      return () async {
+        if (!context.mounted) return;
+        bool cancelBooking = await showDialog(
+          context: context,
+          builder:
+              (context) => ConfirmDialog(
+                title: "Cancel your reservation?",
+                content: "Cancel reservation of Room ${booking.room.name}?.",
+                confirmString: "Confirm",
+                icon: Icons.event_busy_outlined,
+              ),
+        );
+        if (!cancelBooking) return;
+
+        final token = await _auth?.getToken();
+        if (token == null) return;
+
+        await _api.cancelBooking(booking.bid, token);
+
+        if (context.mounted) _updateBookingInfos();
+      };
+    }
+    if (["L", "U", "I"].contains(booking.status)) {
+      return () async {
+        if (!context.mounted) return;
+        bool returnRoom = await showDialog(
+          context: context,
+          builder:
+              (context) => ConfirmDialog(
+                title: "Return your booking?",
+                content: "Finish booking of Room ${booking.room.name}?.",
+                confirmString: "Return",
+                icon: Icons.exit_to_app,
+              ),
+        );
+        if (!returnRoom) return;
+
+        final token = await _auth?.getToken();
+        if (token == null) return;
+
+        await _api.returnBooking(booking.bid, token);
+
+        if (context.mounted) _updateBookingInfos();
+      };
+    }
+
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -281,175 +343,122 @@ class _ProfilePageState extends State<ProfilePage>
     keys.sort((a, b) => contacts[a]!.name.compareTo(contacts[b]!.name));
 
     final userAccount = _settings?.get("credentials")?["user"] ?? "";
-
     final booking = _selectBooking();
-    final bookingAction = () {
-      if (booking == null) return null;
-      if (booking.host.account.toLowerCase() != userAccount.toLowerCase()) {
-        return null;
-      }
 
-      if (booking.status == "Y") {
-        return () async {
-          if (!context.mounted) return;
-          bool cancelBooking = await showDialog(
-            context: context,
-            builder:
-                (context) => ConfirmDialog(
-                  title: "Cancel your reservation?",
-                  content: "Cancel reservation of Room ${booking.room.name}?.",
-                  confirmString: "Confirm",
-                  icon: Icons.event_busy_outlined,
+    return EasyRefreshIndicator(
+      onRefresh: () async => _updateBookingInfos(shadowUpdate: true),
+      child: CenterContent(
+        child: Column(
+          children: [
+            ReservationBanner(
+              onRefresh: _updateBookingInfos,
+              booking: booking,
+              onAction: _selectBookingAction(booking, userAccount),
+              loggedIn: _settings!.get("credentials") != null,
+              finishedRequest:
+                  _updateBookingsComplete && _confRoomBooking != null ||
+                  _updateHistoryComplete && _historyBooking != null ||
+                  _updateBookingsComplete && _updateHistoryComplete,
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                Expanded(
+                  child: TitleWithIcon(icon: Icons.people, title: "Contacts:"),
                 ),
-          );
-          if (!cancelBooking) return;
-
-          final token = await _auth?.getToken();
-          if (token == null) return;
-
-          await _api.cancelBooking(booking.bid, token);
-
-          if (context.mounted) _updateBookingInfos();
-        };
-      }
-      if (["L", "U", "I"].contains(booking.status)) {
-        return () async {
-          if (!context.mounted) return;
-          bool returnRoom = await showDialog(
-            context: context,
-            builder:
-                (context) => ConfirmDialog(
-                  title: "Return your booking?",
-                  content: "Finish booking of Room ${booking.room.name}?.",
-                  confirmString: "Return",
-                  icon: Icons.exit_to_app,
-                ),
-          );
-          if (!returnRoom) return;
-
-          final token = await _auth?.getToken();
-          if (token == null) return;
-
-          await _api.returnBooking(booking.bid, token);
-
-          if (context.mounted) _updateBookingInfos();
-        };
-      }
-
-      return null;
-    }();
-
-    return CenterContent(
-      child: Column(
-        children: [
-          ReservationBanner(
-            onRefresh: _updateBookingInfos,
-            booking: booking,
-            onAction: bookingAction,
-            loggedIn: _settings!.get("credentials") != null,
-            finishedRequest:
-                _updateBookingsComplete && _confRoomBooking != null ||
-                _updateHistoryComplete && _historyBooking != null ||
-                _updateBookingsComplete && _updateHistoryComplete,
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            mainAxisSize: MainAxisSize.max,
-            children: [
-              Expanded(
-                child: TitleWithIcon(icon: Icons.people, title: "Contacts:"),
-              ),
-            ],
-          ),
-          Expanded(
-            child:
-                (keys.isEmpty)
-                    ? CenterScrollColumn(
-                      spacing: 8.0,
-                      children: [
-                        Icon(Icons.group_off_outlined, size: 36),
-                        Text(
-                          "No Contacts added",
-                          style: TextStyle(fontSize: 20),
-                        ),
-                        OutlinedButton.icon(
-                          onPressed: _importComplete ? _addFromHistory : null,
-                          icon:
-                              _importComplete
-                                  ? Icon(Icons.auto_mode_outlined)
-                                  : CircularProgressIndicator.adaptive(),
-                          label: Text("Import From History"),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 32),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            spacing: 16.0,
-                            children: const [
-                              Icon(Icons.person_add_outlined),
-                              Expanded(
-                                child: Text(
-                                  "Many offerings can only be booked by a group of people. Add your fellow library-goers by tapping the Button below. (Login required)",
-                                ),
-                              ),
-                            ],
+              ],
+            ),
+            Expanded(
+              child:
+                  (keys.isEmpty)
+                      ? CenterScrollColumn(
+                        spacing: 8.0,
+                        children: [
+                          Icon(Icons.group_off_outlined, size: 36),
+                          Text(
+                            "No Contacts added",
+                            style: TextStyle(fontSize: 20),
                           ),
-                        ),
-                      ],
-                    )
-                    : ListView.builder(
-                      itemCount: contacts.length,
-                      itemBuilder: (context, i) {
-                        final Student c = contacts[keys[i]]!;
-                        final initials = c.name
-                            .split(" ")
-                            .map((el) => el[0])
-                            .join("");
-
-                        String roomInfo = "";
-
-                        if (_contactStates.containsKey(c.uuid)) {
-                          roomInfo =
-                              " – Room ${_contactStates[c.uuid]!.room.name}";
-                        }
-
-                        return ListTile(
-                          leading: CircleAvatar(
-                            child: Text(
-                              initials.substring(0, min(initials.length, 3)),
+                          OutlinedButton.icon(
+                            onPressed: _importComplete ? _addFromHistory : null,
+                            icon:
+                                _importComplete
+                                    ? Icon(Icons.auto_mode_outlined)
+                                    : CircularProgressIndicator.adaptive(),
+                            label: Text("Import From History"),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 32),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              spacing: 16.0,
+                              children: const [
+                                Icon(Icons.person_add_outlined),
+                                Expanded(
+                                  child: Text(
+                                    "Many offerings can only be booked by a group of people. Add your fellow library-goers by tapping the Button below. (Login required)",
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          trailing: IconButton(
-                            onPressed: () async {
-                              bool deleteToken = await showDialog(
-                                context: context,
-                                builder:
-                                    (context) => ConfirmDialog(
-                                      title: "Delete Contact?",
-                                      content:
-                                          "Delete ${c.name}? You will need their Student ID to add them again.",
-                                      confirmString: "Delete",
-                                      icon: Icons.logout,
-                                    ),
-                              );
-                              if (deleteToken) {
-                                setState(() {
-                                  contacts.remove(keys[i]);
-                                  _settings!.set("contacts", contacts);
-                                });
-                              }
-                            },
-                            icon: Icon(Icons.person_remove_outlined),
-                          ),
-                          title: Text(c.name),
-                          subtitle: Text(c.account + roomInfo),
-                          onTap: () {},
-                        );
-                      },
-                    ),
-          ),
-        ],
+                        ],
+                      )
+                      : ListView.builder(
+                        itemCount: contacts.length,
+                        itemBuilder: (context, i) {
+                          final Student c = contacts[keys[i]]!;
+                          final initials = c.name
+                              .split(" ")
+                              .map((el) => el[0])
+                              .join("");
+
+                          String roomInfo = "";
+
+                          if (_contactStates.containsKey(c.uuid)) {
+                            roomInfo =
+                                " – Room ${_contactStates[c.uuid]!.room.name}";
+                          }
+
+                          return ListTile(
+                            leading: CircleAvatar(
+                              child: Text(
+                                initials.substring(0, min(initials.length, 3)),
+                              ),
+                            ),
+                            trailing: IconButton(
+                              onPressed: () async {
+                                bool deleteToken = await showDialog(
+                                  context: context,
+                                  builder:
+                                      (context) => ConfirmDialog(
+                                        title: "Delete Contact?",
+                                        content:
+                                            "Delete ${c.name}? You will need their Student ID to add them again.",
+                                        confirmString: "Delete",
+                                        icon: Icons.logout,
+                                      ),
+                                );
+                                if (deleteToken) {
+                                  setState(() {
+                                    contacts.remove(keys[i]);
+                                    _settings!.set("contacts", contacts);
+                                  });
+                                }
+                              },
+                              icon: Icon(Icons.person_remove_outlined),
+                            ),
+                            title: Text(c.name),
+                            subtitle: Text(c.account + roomInfo),
+                            onTap: () {},
+                          );
+                        },
+                      ),
+            ),
+          ],
+        ),
       ),
     );
   }
