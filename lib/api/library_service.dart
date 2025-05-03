@@ -38,8 +38,9 @@ class LibraryService {
 
   Future<ApiResult> _cachedRequest(
     String cacheKey,
-    Future<ApiResult> Function() request,
-  ) async {
+    Future<ApiResult> Function() request, {
+    ignoreCache = false,
+  }) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     DateTime lastValidCache = DateTime.parse(
       prefs.getString("api_${cacheKey}_date") ?? "19700101",
@@ -47,7 +48,8 @@ class LibraryService {
 
     int statusCode = 200;
 
-    if (lastValidCache.isBefore(DateTime.now().add(Duration(days: -7)))) {
+    if (lastValidCache.isBefore(DateTime.now().add(Duration(days: -7))) ||
+        ignoreCache) {
       final result = await request();
       if (result.statusCode == 200) {
         prefs.setString("api_${cacheKey}_date", DateTime.now().toString());
@@ -121,6 +123,7 @@ class LibraryService {
   Future<List<Booking>> getBookings(
     String authToken, {
     bool includePast = false,
+    bool ignoreCache = true,
   }) async {
     Map<String, dynamic>? params;
     if (!includePast) {
@@ -132,10 +135,14 @@ class LibraryService {
         'timeStamp': "${now.millisecondsSinceEpoch}",
       };
     }
-    final ApiResult res = await get(
-      endpoint: Endpoint.reservationsPager,
-      params: params,
-      headers: {"authToken": authToken},
+    final ApiResult res = await _cachedRequest(
+      "mybookings_${includePast ? 'all' : 'now'}",
+      () => get(
+        endpoint: Endpoint.reservationsPager,
+        params: params,
+        headers: {"authToken": authToken},
+      ),
+      ignoreCache: ignoreCache,
     );
 
     if (res.statusCode != 200) return [];
@@ -253,12 +260,17 @@ class LibraryService {
 
   Future<List<BookingStats>> getBookingStats(
     String authToken,
-    Student user,
-  ) async {
-    final ApiResult res = await get(
-      endpoint: Endpoint.myBookingStats,
-      params: {"userId": user.uuid},
-      headers: {"authToken": authToken},
+    Student user, {
+    ignoreCache = true,
+  }) async {
+    final ApiResult res = await _cachedRequest(
+      "bookingStats_${user.uuid}",
+      () => get(
+        endpoint: Endpoint.myBookingStats,
+        params: {"userId": user.uuid},
+        headers: {"authToken": authToken},
+      ),
+      ignoreCache: ignoreCache,
     );
 
     if (res.statusCode != 200) return [];
