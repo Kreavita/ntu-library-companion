@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ntu_library_companion/widgets/centered_content.dart';
+import 'package:ntu_library_companion/widgets/centered_scroll_column.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -7,9 +8,7 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CenterContent(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: CenterScrollColumn(
         children: [
           Padding(
             padding: const EdgeInsets.all(8.0),
