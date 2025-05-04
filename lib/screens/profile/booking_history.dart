@@ -1,7 +1,6 @@
 import 'package:expandable_page_view/expandable_page_view.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:ntu_library_companion/api/auth_service.dart';
 import 'package:ntu_library_companion/api/library_service.dart';
 import 'package:ntu_library_companion/model/booking.dart';
 import 'package:ntu_library_companion/model/booking_stats.dart';
@@ -27,7 +26,6 @@ class _BookingHistoryState extends State<BookingHistory>
       GlobalKey<RefreshIndicatorState>();
 
   final LibraryService _library = LibraryService();
-  AuthService? _auth;
   SettingsProvider? _settings;
 
   int _fetchingState = 0; // 0: not fetched, 1: fetching, 2: complete
@@ -71,7 +69,6 @@ class _BookingHistoryState extends State<BookingHistory>
   @override
   Widget build(BuildContext context) {
     _settings ??= Provider.of<SettingsProvider>(context);
-    _auth ??= AuthService(settings: _settings!);
 
     if (_fetchingState == 0) fetchHistory();
 
@@ -131,10 +128,7 @@ class _BookingHistoryState extends State<BookingHistory>
   Future<void> fetchHistory({bool doFullFetch = false}) async {
     if (_fetchingState == 1 || _fetchingState == 2) return;
     _fetchingState = doFullFetch ? 2 : 1;
-
-    final authToken = await _auth!.getToken();
-
-    if (authToken == null) {
+    if (!(_settings?.loggedIn ?? false)) {
       _fetchingState = 3;
       return;
     }
@@ -142,13 +136,11 @@ class _BookingHistoryState extends State<BookingHistory>
     final bool needFullFetch = prefs.get("api_mybookings_all") != null;
 
     _history = await _library.getBookings(
-      authToken,
       includePast: true,
       ignoreCache: doFullFetch,
     );
 
     _bookingStats = await _library.getBookingStats(
-      authToken,
       _settings!.get('accountHolder') as Student,
       ignoreCache: doFullFetch,
     );

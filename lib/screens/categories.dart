@@ -34,7 +34,6 @@ class CategoriesPageState extends State<CategoriesPage>
   late final SettingsProvider _settings = Provider.of<SettingsProvider>(
     context,
   );
-  late final AuthService _auth = AuthService(settings: _settings);
 
   bool _loading = false;
   final Map<String, Category> _cates = {};
@@ -69,10 +68,7 @@ class CategoriesPageState extends State<CategoriesPage>
   }
 
   Future<void> fetchCatesWrapper() async {
-    if (_loading) {
-      print("already loading");
-      return;
-    }
+    if (_loading) return;
     _loading = true;
 
     await _fetchCates();
@@ -83,7 +79,9 @@ class CategoriesPageState extends State<CategoriesPage>
   }
 
   Future<void> _fetchCates() async {
-    final authToken = await _auth.getToken(
+    if (!_settings.loggedIn) return;
+
+    final cates = await _library.getCategories(
       onResult: (res) {
         if (context.mounted && res.type != AuthResType.authOk) {
           ScaffoldMessenger.of(
@@ -93,9 +91,6 @@ class CategoriesPageState extends State<CategoriesPage>
       },
     );
 
-    if (authToken == null) return;
-
-    final cates = await _library.getCategories(authToken);
     final type2engName = {};
     final zh2engName = {};
     cates.forEach((_, cat) {
@@ -107,7 +102,10 @@ class CategoriesPageState extends State<CategoriesPage>
     _settings.updateCache("zh2engName", zh2engName);
 
     final cateStats = cates.map(
-      (cateId, _) => MapEntry(cateId, _fetchStats(cateId, authToken)),
+      (cateId, _) => MapEntry(
+        cateId,
+        _fetchStats(cateId, _settings.get("authToken") ?? ""),
+      ),
     );
 
     setState(() {

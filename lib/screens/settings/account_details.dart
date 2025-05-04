@@ -21,21 +21,15 @@ class _AccountDetailsState extends State<AccountDetails> {
   late final SettingsProvider _settings = Provider.of<SettingsProvider>(
     context,
   );
-  AuthService? _auth;
   Account? _account;
   bool _alreadyRequested = false;
-  String? _token;
 
   Future<void> _getAccount() async {
     if (AuthService.authFailed || _alreadyRequested) return;
     _alreadyRequested = true;
+    if (!_settings.loggedIn) return;
 
-    _auth ??= AuthService(settings: _settings);
-    _token = await _auth!.getToken();
-
-    if (_token == null) return;
-
-    final Account? me = await _library.getMyProfile(_token!);
+    final Account? me = await _library.getMyProfile();
 
     if (me != null && mounted) {
       setState(() {
@@ -183,10 +177,13 @@ class _AccountDetailsState extends State<AccountDetails> {
                       ),
                       AccountTile(
                         icon: Icons.code,
-                        onTap: () => _clipboard(_token ?? "Unavailable"),
+                        onTap:
+                            () => _clipboard(
+                              _settings.get("authToken") ?? "Unavailable",
+                            ),
                         name: "AuthToken: ",
                         value:
-                            "${(_token ?? "Unavailable").substring(0, 11)}... <Tap to Copy>",
+                            "${(_settings.get("authToken") ?? "Unavailable").substring(0, 11)}... <Tap to Copy>",
                       ),
                     ],
                   ),

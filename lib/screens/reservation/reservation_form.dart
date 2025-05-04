@@ -1,11 +1,8 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart';
 import 'package:intl/intl.dart';
-import 'package:ntu_library_companion/api/auth_service.dart';
 import 'package:ntu_library_companion/api/library_service.dart';
 import 'package:ntu_library_companion/model/account.dart';
+import 'package:ntu_library_companion/model/api_result.dart';
 import 'package:ntu_library_companion/model/booking.dart';
 import 'package:ntu_library_companion/model/category.dart';
 import 'package:ntu_library_companion/model/conference_room.dart';
@@ -45,8 +42,6 @@ class _ReservationFormState extends State<ReservationForm> {
   late final SettingsProvider _settings = Provider.of<SettingsProvider>(
     context,
   );
-  late final AuthService _auth = AuthService(settings: _settings);
-  String? _authToken;
 
   List<ConferenceRoom> _conferenceRooms = [];
   Map<String, Student>? _contacts;
@@ -68,25 +63,15 @@ class _ReservationFormState extends State<ReservationForm> {
   Future<Map<ConferenceRoom, List<Booking>>>? _bookings = Future(() => {});
 
   Future<void> _getConfRooms() async {
-    if (_conferenceRooms.isNotEmpty) return;
-    final token = await _auth.getToken();
-    if (token == null) return;
+    if (_conferenceRooms.isNotEmpty || !_settings.loggedIn) return;
 
-    setState(() {
-      _authToken ??= token;
-    });
-
-    _conferenceRooms = await _library.getConferenceRooms(
-      _authToken!,
-      widget.cate,
-    );
+    _conferenceRooms = await _library.getConferenceRooms(widget.cate);
 
     _updateBookings();
   }
 
   _updateBookings() {
     _bookings = _library.getConfRoomBookings(
-      _authToken ?? "",
       _date,
       _date.add(Duration(days: 1)),
     );
@@ -324,7 +309,6 @@ class _ReservationFormState extends State<ReservationForm> {
                       ),
                     ),
                     RoomPicker(
-                      authToken: _authToken ?? "",
                       cate: widget.cate,
                       date: _date,
                       startTime: _start,
@@ -509,7 +493,7 @@ class _ReservationFormState extends State<ReservationForm> {
   }
 
   void _submitReservation() async {
-    if (_submitting || _authToken == null) return;
+    if (_submitting) return;
 
     if (!_validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -527,7 +511,7 @@ class _ReservationFormState extends State<ReservationForm> {
 
     _submitting = true;
 
-    final Account? user = await _library.getMyProfile(_authToken!);
+    final Account? user = await _library.getMyProfile();
 
     if (user == null) {
       _submitting = false;
@@ -537,14 +521,13 @@ class _ReservationFormState extends State<ReservationForm> {
     final List<Student> participants =
         _participants.map<Student>((key) => _contacts![key]!).toList();
 
-    final StreamedResponse resp = await LibraryService().postBooking(
+    final ApiResult resp = await LibraryService().postBooking(
       user,
       _selectedRoom!,
       _start,
       _end,
       _date,
       participants,
-      _authToken!,
     );
 
     if (resp.statusCode == 401) {
@@ -556,7 +539,9 @@ class _ReservationFormState extends State<ReservationForm> {
       return;
     }
 
-    final jsonContent = jsonDecode(await resp.stream.bytesToString());
+    final jsonContent = resp.asJson<Map<String, dynamic>>(
+      fallback: {"message": "JSON Parsing Error"},
+    );
 
     String message = "";
 

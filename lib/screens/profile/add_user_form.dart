@@ -4,14 +4,9 @@ import 'package:ntu_library_companion/api/library_service.dart';
 import 'package:ntu_library_companion/model/student.dart';
 
 class AddUserForm extends StatefulWidget {
-  final String authToken;
   final String studentId;
 
-  const AddUserForm({
-    super.key,
-    required this.authToken,
-    required this.studentId,
-  });
+  const AddUserForm({super.key, required this.studentId});
 
   @override
   State<AddUserForm> createState() => _AddUserFormState();
@@ -41,10 +36,7 @@ class _AddUserFormState extends State<AddUserForm> {
     Student? student;
 
     try {
-      student = await _api.getMember(
-        studentId: _studentId!,
-        authToken: widget.authToken,
-      );
+      student = await _api.getMember(studentId: _studentId!);
     } on ClientException {
       setState(() {
         _ongoingRequest = false;

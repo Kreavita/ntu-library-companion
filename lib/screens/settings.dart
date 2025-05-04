@@ -43,7 +43,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             Text('Settings', style: TextStyle(fontSize: 24)),
             Padding(padding: const EdgeInsets.symmetric(vertical: 16)),
-            (_settings.get("credentials") != null)
+            (_settings.loggedIn)
                 ? SettingTile(
                   name: _settings.get("accountHolder")?.name ?? "Logged in",
                   description: "Tap to view your account",
@@ -210,15 +210,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.""",
   void _refreshAccountHolder() async {
     if (_settings.get('accountHolder') is Account) return;
 
-    final authToken = _settings.get("authToken") ?? "";
     final studentId = _settings.get("credentials")?["user"] ?? "";
 
-    if (authToken == "" || studentId == "") return;
+    if (!_settings.loggedIn || studentId == "") return;
 
-    final student = await _api.getMember(
-      studentId: studentId,
-      authToken: authToken,
-    );
+    final student = await _api.getMember(studentId: studentId);
 
     _settings.set("accountHolder", student);
   }

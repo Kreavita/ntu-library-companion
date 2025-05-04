@@ -2,9 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:ntu_library_companion/api/auth_service.dart';
 import 'package:ntu_library_companion/api/library_service.dart';
-import 'package:ntu_library_companion/model/auth_result.dart';
 import 'package:ntu_library_companion/model/booking.dart';
 import 'package:ntu_library_companion/model/conference_room.dart';
 import 'package:ntu_library_companion/model/settings_provider.dart';
@@ -32,7 +30,6 @@ class _ProfilePageState extends State<ProfilePage>
     with AutomaticKeepAliveClientMixin {
   StreamSubscription<dynamic>? _streamSubscription;
   SettingsProvider? _settings;
-  AuthService? _auth;
 
   final LibraryService _api = LibraryService();
   bool _importComplete = true;
@@ -71,9 +68,9 @@ class _ProfilePageState extends State<ProfilePage>
   handleFabEvent(receiver) async {
     if (!mounted || receiver != "addContact") return;
 
-    if (_auth == null || _settings == null) return;
+    if (!(_settings?.loggedIn ?? false)) return;
 
-    final authToken = await _auth!.getToken(
+    /*final authToken = await _auth!.getToken(
       onResult: (res) {
         if (context.mounted && res.type != AuthResType.authOk) {
           ScaffoldMessenger.of(
@@ -83,16 +80,14 @@ class _ProfilePageState extends State<ProfilePage>
       },
     );
 
-    if (authToken == null) return;
+    if (authToken == null) return;*/
 
     if (mounted) {
       Student? result = await showDialog(
         context: context,
         builder:
-            (context) => AddUserForm(
-              authToken: authToken,
-              studentId: _settings!.get("credentials")["user"],
-            ),
+            (context) =>
+                AddUserForm(studentId: _settings!.get("credentials")["user"]),
       );
 
       if (result == null) return;
@@ -109,7 +104,7 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   void _addFromHistory() async {
-    if (!_importComplete) return;
+    if (!_importComplete || !(_settings?.loggedIn ?? false)) return;
     Map<String, Student> updatedList =
         _settings!.get("contacts") ?? <String, Student>{};
 
@@ -117,16 +112,7 @@ class _ProfilePageState extends State<ProfilePage>
       _importComplete = false;
     });
 
-    final token = await _auth!.getToken();
-
-    if (token == null) {
-      setState(() {
-        _importComplete = true;
-      });
-      return;
-    }
-
-    final bookings = await _api.getBookings(token, includePast: true);
+    final bookings = await _api.getBookings(includePast: true);
 
     for (Booking booking in bookings) {
       final participants = booking.bookingParticipants;
@@ -142,17 +128,14 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   Future<void> _updateBookingInfos({bool shadowUpdate = false}) async {
-    if (!_updateBookingsComplete || !_updateHistoryComplete) return;
+    if (!_updateBookingsComplete ||
+        !_updateHistoryComplete ||
+        !(_settings?.loggedIn ?? false)) {
+      return;
+    }
 
     _updateBookingsComplete = false;
     _updateHistoryComplete = false;
-
-    final token = await _auth!.getToken();
-    if (token == null) {
-      _updateBookingsComplete = true;
-      _updateHistoryComplete = true;
-      return;
-    }
 
     if (!shadowUpdate) {
       setState(() {
@@ -162,7 +145,7 @@ class _ProfilePageState extends State<ProfilePage>
     }
 
     () async {
-      final bookings = await _api.getBookings(token);
+      final bookings = await _api.getBookings();
       bookings.sort((a, b) => a.bookingStartDate.compareTo(b.bookingStartDate));
       _historyBooking = bookings.firstOrNull;
 
@@ -180,7 +163,7 @@ class _ProfilePageState extends State<ProfilePage>
       Booking? newBooking;
 
       Map<ConferenceRoom, List<Booking>> confRoomBookings = await _api
-          .getConfRoomBookings(token, now, now.add(Duration(days: 1)));
+          .getConfRoomBookings(now, now.add(Duration(days: 1)));
 
       confRoomBookings.forEach((room, bookings) {
         for (final booking in bookings) {
@@ -289,10 +272,7 @@ class _ProfilePageState extends State<ProfilePage>
         );
         if (!cancelBooking) return;
 
-        final token = await _auth?.getToken();
-        if (token == null) return;
-
-        await _api.cancelBooking(booking.bid, token);
+        await _api.cancelBooking(booking.bid);
 
         if (context.mounted) _updateBookingInfos();
       };
@@ -311,11 +291,7 @@ class _ProfilePageState extends State<ProfilePage>
               ),
         );
         if (!returnRoom) return;
-
-        final token = await _auth?.getToken();
-        if (token == null) return;
-
-        await _api.returnBooking(booking.bid, token);
+        await _api.returnBooking(booking.bid);
 
         if (context.mounted) _updateBookingInfos();
       };
@@ -329,7 +305,6 @@ class _ProfilePageState extends State<ProfilePage>
     super.build(context);
 
     _settings ??= Provider.of<SettingsProvider>(context);
-    _auth ??= AuthService(settings: _settings!);
 
     if (_timer == null) {
       _timer = Timer.periodic(Duration(minutes: 7), (Timer timer) {

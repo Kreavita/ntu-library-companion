@@ -8,6 +8,8 @@ class SettingsProvider with ChangeNotifier {
 
   dynamic get(String key) => _settings[key];
 
+  bool get loggedIn => get("credentials") != null;
+
   void set(String key, dynamic value) {
     if (!_settings.containsKey(key)) {
       throw StateError("$key not present in settings");
@@ -48,6 +50,7 @@ class SettingsProvider with ChangeNotifier {
               ? Student.fromJson(jsonObj['accountHolder'])
               : null as Student?,
       'authToken': jsonObj['authToken'] ?? '',
+      'authToken_date': jsonObj['authToken_date'] ?? '1970',
       'contacts': contacts,
     });
     _jsonStore = jsonStore;

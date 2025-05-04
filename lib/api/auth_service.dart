@@ -26,10 +26,25 @@ class AuthService {
     final String? token;
 
     try {
-      token = await _getToken(onResult: onResult);
+      token = await _getTokenHelper(
+        onResult: onResult,
+        invalidSess: true,
+        invalidToken: true,
+      );
       _tokenCompleter!.complete(token);
-    } catch (e) {
-      rethrow;
+    } on http.ClientException catch (e) {
+      print("Got ClientException: $e");
+
+      if (onResult != null) {
+        onResult(
+          AuthResult(
+            type: AuthResType.networkError,
+            message:
+                "Failed to communicate with library services, is your Internet Connection working?",
+          ),
+        );
+      }
+      return null;
     } finally {
       _tokenCompleter = null;
     }
@@ -83,6 +98,7 @@ class AuthService {
     void Function(AuthResult res)? onResult,
   }) async {
     final creds = settings.get("credentials");
+    if (creds == null) return null;
 
     if (invalidSess) {
       // get Session from NTU Login
@@ -108,6 +124,8 @@ class AuthService {
     if (invalidToken) {
       authToken = await _authAtSmsWithNtuSession(creds["ntuSession"]);
       settings.set("authToken", authToken ?? "");
+      settings.set("authToken_date", "${DateTime.now()}");
+      _lastAuthSuccess = DateTime.now();
 
       if (authToken == null || authToken == "") {
         // Failed to get AuthToken, should regenerate Session

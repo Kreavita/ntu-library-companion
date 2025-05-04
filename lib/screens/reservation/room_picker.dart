@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:ntu_library_companion/api/base_api.dart';
 import 'package:ntu_library_companion/api/library_service.dart';
 import 'package:ntu_library_companion/model/api_result.dart';
 import 'package:ntu_library_companion/model/category.dart';
 import 'package:ntu_library_companion/model/room.dart';
-import 'package:ntu_library_companion/util.dart';
 import 'package:ntu_library_companion/widgets/info_row.dart';
 
 class RoomPicker extends StatefulWidget {
-  final String authToken;
   final Category cate;
   final DateTime date;
   final TimeOfDay startTime;
@@ -20,7 +16,6 @@ class RoomPicker extends StatefulWidget {
 
   const RoomPicker({
     super.key,
-    required this.authToken,
     required this.cate,
     required this.date,
     required this.startTime,
@@ -59,14 +54,12 @@ class _RoomPickerState extends State<RoomPicker> {
       child:
           (!_fetchComplete)
               ? Center(child: CircularProgressIndicator.adaptive())
-              : (_rooms.isEmpty ||
-                  !widget.validSelection ||
-                  widget.authToken == "")
+              : (_rooms.isEmpty || !widget.validSelection)
               ? Padding(
                 padding: const EdgeInsets.all(32.0),
                 child: Center(
                   child:
-                      (widget.validSelection && widget.authToken != "")
+                      (widget.validSelection)
                           ? InfoRow(
                             icon: Icons.no_meeting_room_outlined,
                             child: Text(
@@ -123,7 +116,7 @@ class _RoomPickerState extends State<RoomPicker> {
       _fetchComplete = false;
     });
 
-    if (widget.authToken == "" || !widget.validSelection) {
+    if (!widget.validSelection) {
       setState(() {
         _fetchComplete = true;
       });
@@ -134,16 +127,11 @@ class _RoomPickerState extends State<RoomPicker> {
     _startTime = widget.startTime;
     _endTime = widget.endTime;
 
-    String date = DateFormat("y/MM/dd").format(_date!);
-
-    final ApiResult res = await _api.get(
-      endpoint: Endpoint.availRooms,
-      headers: {"authToken": widget.authToken},
-      params: {
-        "bookingStartDate": "$date ${formatTime(_startTime!)}:00",
-        "bookingEndDate": "$date ${formatTime(_endTime!)}:00",
-        "cateId": widget.cate.catId,
-      },
+    final ApiResult res = await _api.getAvailRooms(
+      widget.cate,
+      _date!,
+      _startTime!,
+      _endTime!,
     );
 
     if (res.statusCode != 200 && context.mounted) {

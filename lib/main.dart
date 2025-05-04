@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:json_store/json_store.dart';
+import 'package:ntu_library_companion/api/auth_service.dart';
+import 'package:ntu_library_companion/api/library_service.dart';
 import 'package:ntu_library_companion/model/settings_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -78,6 +80,8 @@ class _MyHomePageState extends State<MyHomePage> {
       settings.loadJson(jsonObj: jsonObj ?? {}, jsonStore: jsonStore);
       setState(() {});
     });
+
+    LibraryService.setAuth(AuthService(settings: settings));
 
     //WidgetsBinding.instance.addPostFrameCallback((_) async {final jsonObj = await });
   }
