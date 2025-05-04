@@ -27,14 +27,13 @@ class ConfRoomTimetable extends StatelessWidget {
           future: bookings,
           builder: (context, snapshot) {
             if (snapshot.hasData) {
-              snapshot.data?.removeWhere((_, bookings) {
+              snapshot.data?.forEach((_, bookings) {
                 bookings.removeWhere(
                   (booking) =>
                       booking.bookingEndDate.day != date.day ||
                       booking.bookingEndDate.month != date.month ||
                       booking.bookingEndDate.year != date.year,
                 );
-                return bookings.isEmpty;
               });
               return SingleChildScrollView(
                 child: Column(
