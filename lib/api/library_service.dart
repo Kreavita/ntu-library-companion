@@ -169,15 +169,17 @@ class LibraryService {
     bool includePast = false,
     bool ignoreCache = true,
   }) async {
-    Map<String, dynamic>? params;
-    if (!includePast) {
-      final now = DateTime.now();
-      params = {
-        'queryString': '{"status":"Y,E,U,L,I"}',
-        'pagerString': '{"pageSize":-1,"sortColumnName":"bookingStartDate"}',
-        'bookingStartDate': DateFormat("yyyy-MM-dd").format(now),
-        'timeStamp': "${now.millisecondsSinceEpoch}",
-      };
+    final now = DateTime.now();
+    Map<String, dynamic> params = {
+      'queryString': '{"status":"Y,E,U,L,I"}',
+      'pagerString':
+          '{"pageSize":-1,"sortColumnName":"-bookingStartDate,-createDate"}',
+      'bookingStartDate': DateFormat("yyyy-MM-dd").format(now),
+      'timeStamp': "${now.millisecondsSinceEpoch}",
+    };
+    if (includePast) {
+      params['queryString'] = '{"status":"Z,O,F,T,Y,L,U,C,I,E"}';
+      params['bookingStartDate'] = "1970-01-01";
     }
     final ApiResult res = await _cachedRequest(
       "mybookings_${includePast ? 'all' : 'now'}",
