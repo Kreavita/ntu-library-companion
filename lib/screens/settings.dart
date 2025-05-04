@@ -118,6 +118,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
                           _api.logout(_settings.get("authToken"));
                           _settings.set("authToken", "");
+                          _settings.set("authToken_date", "1970-01-01");
 
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('Token deleted!')),
@@ -198,6 +199,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.""",
       _settings.set("credentials", null);
       _settings.set("accountHolder", null);
       _settings.set("authToken", "");
+      _settings.set("authToken_date", "1970-01-01");
 
       if (mounted) {
         ScaffoldMessenger.of(

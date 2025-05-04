@@ -50,7 +50,7 @@ class SettingsProvider with ChangeNotifier {
               ? Student.fromJson(jsonObj['accountHolder'])
               : null as Student?,
       'authToken': jsonObj['authToken'] ?? '',
-      'authToken_date': jsonObj['authToken_date'] ?? '1970',
+      'authToken_date': jsonObj['authToken_date'] ?? '1970-01-01',
       'contacts': contacts,
     });
     _jsonStore = jsonStore;

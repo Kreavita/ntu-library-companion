@@ -46,9 +46,7 @@ class LibraryService {
 
     String? authToken = _auth?.settings.get("authToken");
     DateTime now = DateTime.now();
-    DateTime tokenBirth = DateTime.parse(
-      _auth?.settings.get("authToken_date") ?? "19700101",
-    );
+    DateTime tokenBirth = DateTime.parse(_auth?.settings.get("authToken_date"));
 
     if (authToken != null && now.isBefore(tokenBirth.add(Duration(hours: 2)))) {
       // worth a try
