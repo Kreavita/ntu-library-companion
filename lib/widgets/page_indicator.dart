@@ -35,9 +35,9 @@ class PageIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!_isOnDesktopAndWeb) {
+    /*if (!_isOnDesktopAndWeb) {
       return const SizedBox.shrink();
-    }
+    }*/
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
 
     return Padding(
